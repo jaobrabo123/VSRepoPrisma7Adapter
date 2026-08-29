@@ -1,0 +1,27 @@
+{
+  "name": "vsrepoprisma7adapter",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "peerDependencies": {
+    "vsrepo": "file:vsrepo-1.4.0.tgz",
+    "@prisma/client": "^7.10.0"
+  },
+  "devDependencies": {
+    "@prisma/adapter-pg": "^7.10.0",
+    "@types/node": "^26.4.0",
+    "@types/pg": "^8.23.1",
+    "dotenv": "^17.4.2",
+    "pg": "^8.23.0",
+    "prisma": "^7.10.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
+  }
+}
