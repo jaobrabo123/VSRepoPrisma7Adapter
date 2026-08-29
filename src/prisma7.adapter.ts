@@ -13,14 +13,15 @@ import { PrismaArgLike } from "./types/prisma-arg-like.type";
 import { PrismaRepositoryLike } from "./types/prisma-repository-like.type";
 
 export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
-    private readonly prismaRepository: PrismaRepositoryLike;
-
     constructor(
         private readonly prisma: any,
         private readonly tableName: string,
     ) {
         super();
-        this.prismaRepository = (prisma as any)[this.tableName];
+    }
+
+    private getPrismaRepository(db: any): PrismaRepositoryLike {
+        return db ? db[this.tableName] : this.prisma[this.tableName];
     }
 
     private resolveArg(
@@ -80,7 +81,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
 
         console.log(arg);
 
-        return this.prismaRepository.findFirst(arg);
+        return this.getPrismaRepository(options?.db).findFirst(arg);
     }
 
     public findOneOrThrow(
