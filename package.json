@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:watch": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "test:types": "tsc --noEmit -p tests/tsconfig.json"
   },
   "keywords": [],
   "author": "",
@@ -19,13 +21,22 @@
     "valibot": "^1.4.2"
   },
   "devDependencies": {
+    "@babel/core": "^8.0.1",
+    "@babel/preset-env": "^8.0.2",
+    "@babel/preset-typescript": "^8.0.1",
+    "@jest/globals": "^30.5.0",
     "@prisma/adapter-pg": "^7.10.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^26.4.0",
     "@types/pg": "^8.23.1",
+    "babel-jest": "^30.5.0",
+    "cross-env": "^10.1.0",
     "dotenv": "^17.4.2",
+    "jest": "^30.5.0",
     "pg": "^8.23.0",
     "prisma": "^7.10.0",
     "tsx": "^4.23.12",
+    "reflect-metadata": "^0.2.2",
     "typescript": "^7.0.2"
   }
 }
