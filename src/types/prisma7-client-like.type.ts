@@ -1,3 +1,6 @@
+/**
+ * @publicApi
+ */
 export type Prisma7ClientLike = {
     $executeRaw: any;
     $executeRawUnsafe: any;

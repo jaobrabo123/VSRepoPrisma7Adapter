@@ -11,8 +11,12 @@
   "license": "ISC",
   "type": "commonjs",
   "peerDependencies": {
-    "vsrepo": "file:vsrepo-1.4.0.tgz",
-    "@prisma/client": "^7.10.0"
+    "@prisma/client": "^7.10.0",
+    "vsrepo": "file:vsrepo-1.4.0.tgz"
+  },
+  "dependencies": {
+    "deepmerge": "^4.3.1",
+    "valibot": "^1.4.2"
   },
   "devDependencies": {
     "@prisma/adapter-pg": "^7.10.0",
