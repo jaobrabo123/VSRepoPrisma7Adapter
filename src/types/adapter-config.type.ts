@@ -2,22 +2,22 @@ import type { VSLogLevel } from "vsrepo";
 import { AdapterRelations } from "./adapter-relations.type";
 
 /**
- * Configuração recebida pelo `VSRepoPrisma7Adapter` no segundo parâmetro do
- * construtor.
+ * Configuration accepted by `VSRepoPrisma7Adapter`'s constructor, as the
+ * second parameter.
+ *
  * @publicApi
  */
 export interface VSRepoPrisma7AdapterConfig<T = any> {
-    /** Nome do model/delegate do Prisma Client (ex: `"user"`, como em `prisma.user`). */
+    /** Name of the Prisma Client model/delegate (e.g. `"user"`, as in `prisma.user`). */
     tableName: string;
-    /** Nome do campo de primary key da entidade (ex: `"id"`). */
-    pkName: string;
+    /** Name of the entity's primary key field (e.g. `"id"`). */
+    pkName: keyof T;
     /**
-     * Configuração das relations da entidade, necessária para os parsers de
-     * `create`/`update`/`merge` resolverem corretamente campos de relação
-     * (ver `Relation`/`AdapterRelations`). Opcional: sem ela, campos de
-     * relação são repassados como estão (raw) para o Prisma.
+     * The entity's relation configuration, needed by the `create`/`update`/`merge`
+     * parsers to correctly resolve relation fields (see `Relation`/`AdapterRelations`).
+     * Optional: without it, relation fields are passed through to Prisma as-is (raw).
      */
     relations?: AdapterRelations<T>;
-    /** Nível mínimo de log do `VSLogger` interno do adapter. @default VSLogLevel.WARN */
+    /** Minimum log level for the adapter's internal `VSLogger`. @default VSLogLevel.WARN */
     logLevel?: VSLogLevel;
 }

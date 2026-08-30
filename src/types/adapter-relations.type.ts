@@ -2,14 +2,14 @@ import type { RelationKeys } from "vsrepo";
 import { Relation } from "./relation.type";
 
 /**
- * Configuração de relations da entidade `T`, usada pelos parsers de
- * `create`/`update`/`merge` para resolver campos de relação de acordo com o
- * comportamento da v1 (ver `Relation`).
+ * Relation configuration for entity `T`, used by the `create`/`update`/`merge`
+ * parsers to resolve relation fields according to the v1 behavior (see
+ * `Relation`).
  *
- * Chaveado pelos campos de relação de `T` (`RelationKeys<T>`). Sem essa
- * configuração (adapter construído sem `relations`), campos de relação são
- * repassados como estão para o Prisma, sem nenhuma resolução especial.
- * 
+ * Keyed by the relation fields of `T` (`RelationKeys<T>`). Without this
+ * configuration (adapter built without `relations`), relation fields are
+ * passed through to Prisma as-is, with no special resolution.
+ *
  * @publicApi
  */
 export type AdapterRelations<T> = Partial<{

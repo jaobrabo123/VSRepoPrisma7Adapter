@@ -1,4 +1,7 @@
 /**
+ * Error thrown by `VSRepoPrisma7Adapter` for adapter-specific failures, such
+ * as invalid constructor configuration.
+ *
  * @publicApi
  */
 export class VSRepoPrisma7AdapterError extends Error {

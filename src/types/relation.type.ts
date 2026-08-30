@@ -1,16 +1,21 @@
 /**
- * Configuração de uma relation, no mesmo formato usado na v1 do VSRepository.
+ * Configuration of a single relation field, using the same shape the v1 of
+ * VSRepository used.
  *
- * - `mode`: cardinalidade da relation do ponto de vista da entidade dona do campo
- *   (`oto` = one-to-one, `mto` = many-to-one, `otm` = one-to-many, `mtm` = many-to-many).
- * - `restriction`: como `save`/`update`/`upsert` tratam relations to-many (`otm`/`mtm`)
- *   e to-one com item já existente (por `pk`) — `"add"` só cria/conecta os itens enviados
- *   (upsert por item), `"set"` também remove/desconecta o que não foi enviado.
- * - `pk`: nome do campo usado como identificador do registro relacionado, usado para
- *   decidir entre `create` (sem pk) e `connectOrCreate`/`upsert` (com pk).
- * - `nullable`: para relations `mto`, indica se o campo aceita ser setado
- *   como `null` (vira `disconnect`). Mantidos os dois nomes por compatibilidade com a v1.
- * 
+ * - `mode`: cardinality of the relation from the point of view of the entity
+ *   that owns the field (`oto` = one-to-one, `mto` = many-to-one,
+ *   `otm` = one-to-many, `mtm` = many-to-many).
+ * - `restriction`: how `save`/`update`/`upsert` handle to-many relations
+ *   (`otm`/`mtm`) and to-one relations pointing to an already-existing record
+ *   (matched by `pk`) — `"add"` only creates/connects the items that were
+ *   sent (upsert per item), `"set"` also removes/disconnects whatever wasn't
+ *   sent.
+ * - `pk`: name of the field used as the identifier of the related record,
+ *   used to decide between `create` (no pk in the payload) and
+ *   `connectOrCreate`/`upsert` (pk present).
+ * - `nullable`: for `mto` relations, whether the field accepts being set to
+ *   `null` (resolved as `disconnect`).
+ *
  * @publicApi
  */
 export interface Relation<T = any> {
