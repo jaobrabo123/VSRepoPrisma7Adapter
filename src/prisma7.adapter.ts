@@ -57,7 +57,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
         );
 
         this.logger.logInfo(
-            `Initialized for table '${this.tableName}' (pkName: '${this.pkName}'${
+            `${this.constructor.name} initialized for table '${this.tableName}' (pkName: '${this.pkName}'${
                 this.relations ? `, relations: [${Object.keys(this.relations).join(", ")}]` : ""
             })`,
         );
