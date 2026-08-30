@@ -66,6 +66,8 @@ const userRepository = new UserRepository();
 const user = await userRepository.get({ id: "..." }, { relations: { posts: true } });
 ```
 
+Aqui, o objeto `relations` passado como segundo argumento é transformado num `include` do Prisma pelo adapter (ver [Relations](#relations)). Se você fornecer `select`, o `relations`/`include` é ignorado.
+
 `Prisma7OrmTypes<DB, TX>` amarra os tipos de retorno de `getDbClient()`/`transaction()` do `VSRepository` aos seus tipos reais e gerados do Prisma — ver [Transactions](#transactions).
 
 ## Config do construtor
@@ -84,6 +86,15 @@ A config é validada com [valibot](https://valibot.dev/) — um `tableName`/`pkN
 ## Relations
 
 Sem `relations`, todo campo — incluindo campos de relação — é repassado direto pro `where`/`data`/`create`/`update` do Prisma, como está. Isso funciona bem pra campos escalares, mas o Prisma espera um formato bem específico de nested write (`create`/`connectOrCreate`/`upsert`/`disconnect`/`deleteMany`/`set`) pra campos de relação — então, se sua entidade tem relations, normalmente você vai querer configurá-las.
+
+> **Nota:** o `relations` e o `select` que você passa no `options` de cada método são transformados num `include` do Prisma (`parsePrismaInclude`) e num `select` do Prisma (`parsePrismaSelect`), respectivamente. Quando o `select` é fornecido, o `include` derivado do `relations` é descartado (fica `undefined`), porque o Prisma não permite combinar `include` e `select` na mesma query. Ou seja, se você já estiver usando `select`, o objeto `relations` vira redundante — por isso ele é facultativo. Essa é a lógica resolvida (de `resolveReadArg`):
+
+```ts
+const prismaSelect = options.select && parsePrismaSelect(options.select);
+const prismaInclude = prismaSelect
+    ? undefined
+    : options.relations && parsePrismaInclude(options.relations);
+```
 
 Cada relation é configurada pelo nome do campo:
 
