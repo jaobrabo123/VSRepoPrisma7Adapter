@@ -1,5 +1,5 @@
 {
-  "name": "vsrepoprisma7adapter",
+  "name": "@vsrepo/prisma7-adapter",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",

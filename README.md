@@ -14,10 +14,13 @@
 - [Basic usage](#basic-usage)
 - [Constructor config](#constructor-config)
 - [Relations](#relations)
-  - [`mode`](#mode)
-  - [`restriction`](#restriction)
-  - [`pk` and `nullable`](#pk-and-nullable)
-  - [How each write method resolves relations](#how-each-write-method-resolves-relations)
+  - [The two `relations`](#the-two-relations)
+  - [`relations` in the constructor (write)](#relations-in-the-constructor-write)
+    - [`mode`](#mode)
+    - [`restriction`](#restriction)
+    - [`pk` and `nullable`](#pk-and-nullable)
+    - [How each write method resolves relations](#how-each-write-method-resolves-relations)
+  - [`relations` in method options (read)](#relations-in-method-options-read)
 - [`merge`](#merge)
 - [`createMany`/`updateMany`/`updateManyReturning` don't support nested writes](#createmanyupdatemanyupdatemanyreturning-dont-support-nested-writes)
 - [Transactions](#transactions)
@@ -32,13 +35,13 @@
 npm install vsrepo @prisma/client
 ```
 
-The adapter itself isn't published as a separate package yet — clone/vendor `src/prisma7.adapter.ts` and its dependencies (`deepmerge`, `valibot`) into your project until it ships as `@vsrepo/prisma7-adapter`.
+The adapter itself isn't published as a separate package yet — `src/prisma7.adapter.ts` pulls in the rest of `src/` (`parsers/`, `resolvers/`, `validators/`, `types/`), so clone/vendor the whole `src/` folder (plus its npm dependencies, `deepmerge` and `valibot`) into your project until it ships as `@vsrepo/prisma7-adapter`.
 
 ## Basic usage
 
 ```typescript
 import { VSRepository, VSLogLevel } from "vsrepo";
-import { VSRepoPrisma7Adapter, Prisma7OrmTypes } from "vsrepoprisma7adapter";
+import { VSRepoPrisma7Adapter, Prisma7OrmTypes } from "@vsrepo/prisma7-adapter";
 import { Prisma, PrismaClient } from "./generated/prisma/client";
 import { prisma } from "./prisma";
 
@@ -66,7 +69,7 @@ const userRepository = new UserRepository();
 const user = await userRepository.get({ id: "..." }, { relations: { posts: true } });
 ```
 
-Here the `relations` object passed as the second argument is transformed into a Prisma `include` by the adapter (see [Relations](#relations)). If you supply `select`, the `relations`/`include` is ignored.
+Here the `relations` you pass in the method `options` — shaped like `{ field: true }` — is transformed into a Prisma `include` by the adapter (see [`relations` in method options (read)](#relations-in-method-options-read)). If you supply `select`, the `relations`/`include` is ignored. Don't confuse it with the constructor-config `relations`, which describes how relation fields are resolved in write payloads — the difference is explained in [The two `relations`](#the-two-relations).
 
 `Prisma7OrmTypes<DB, TX>` ties `VSRepository`'s `getDbClient()`/`transaction()` return types to your real, generated Prisma types — see [Transactions](#transactions).
 
@@ -76,7 +79,7 @@ Here the `relations` object passed as the second argument is transformed into a 
 new VSRepoPrisma7Adapter(prisma, {
     tableName: "user", // required — the Prisma Client model/delegate name, as in `prisma.user`
     pkName: "id",       // required — the entity's primary key field name
-    relations: { ... }, // optional — see "Relations" below
+    relations: { ... }, // optional — see "relations in the constructor (write)" below
     logLevel: VSLogLevel.WARN, // optional — default: VSLogLevel.WARN
 });
 ```
@@ -85,16 +88,23 @@ The config is validated with [valibot](https://valibot.dev/) — an invalid `tab
 
 ## Relations
 
-Without `relations`, every field — including relation fields — is passed straight through to Prisma's `where`/`data`/`create`/`update`, as-is. That's fine for scalar fields, but Prisma expects a very specific nested-write shape (`create`/`connectOrCreate`/`upsert`/`disconnect`/`deleteMany`/`set`) for relation fields, so if your entity has relations you'll usually want to configure them.
+### The two `relations`
 
-> **Note:** the `relations` and `select` you pass to each method's `options` are transformed into a Prisma `include` (`parsePrismaInclude`) and a Prisma `select` (`parsePrismaSelect`) respectively. When `select` is provided, the `include` derived from `relations` is discarded (`undefined`), because Prisma doesn't allow combining `include` and `select` in a single query. In other words, if you're already using `select`, the `relations` object becomes redundant — so it's optional. Here's the resolved logic (from `resolveReadArg`):
+The name `relations` appears in **two different places** in the API, with **different shapes and purposes** — easy to confuse. In a nutshell:
 
-```ts
-const prismaSelect = options.select && parsePrismaSelect(options.select);
-const prismaInclude = prismaSelect
-    ? undefined
-    : options.relations && parsePrismaInclude(options.relations);
-```
+| | `relations` in the **constructor** | `relations` in **method options** |
+| --- | --- | --- |
+| Where you define it | `new VSRepoPrisma7Adapter(prisma, { relations: ... })` | `repository.get(where, { relations: ... })` — and other methods |
+| Shape | One **config object** per field: `{ mode, restriction, pk, nullable? }` | One **`true`/sub-object** per field: `{ posts: true }` |
+| Purpose | **Write** — when a `create`/`update`/`upsert`/`save`/`merge` payload contains a relation field, tells the adapter how to turn it into a Prisma nested write (`create`/`connectOrCreate`/`upsert`/`disconnect`/`deleteMany`/`set`) | **Read** — eager loading: which relations to fetch alongside the result (becomes a Prisma `include`) |
+| Consumed by | `parsePrismaWriteData` / `mergeEntities` (write resolvers) | `parsePrismaInclude` (via `resolveReadArg`) |
+| Depends on the other? | No — it only affects writes/`merge` | No — it works even with no `relations` in the constructor |
+
+Neither depends on the other: the method-options `relations` does eager loading even when the constructor has no `relations`, and the constructor `relations` governs write behavior even if you never pass `relations` in options. The two subsections below cover each one.
+
+### `relations` in the constructor (write)
+
+The `relations` config on the constructor describes, for each relation field of your entity, **how the adapter should resolve that field when it shows up in write payloads** (`create`/`update`/`upsert`/`save`/`merge`) — the same behavior the v1 of VSRepository had.
 
 Each relation is configured by its field name:
 
@@ -106,7 +116,9 @@ relations: {
 }
 ```
 
-### `mode`
+Without `relations`, every field — including relation fields — is passed straight through to Prisma's `where`/`data`/`create`/`update`, as-is. That's fine for scalar fields, but Prisma expects a very specific nested-write shape (`create`/`connectOrCreate`/`upsert`/`disconnect`/`deleteMany`/`set`) for relation fields, so if your entity has relations you'll usually want to configure them.
+
+#### `mode`
 
 Cardinality of the relation, from the point of view of the entity that owns the field:
 
@@ -117,25 +129,55 @@ Cardinality of the relation, from the point of view of the entity that owns the 
 | `otm` | one-to-many | an array of objects |
 | `mtm` | many-to-many | an array of objects |
 
-### `restriction`
+#### `restriction`
 
 Controls how `save`/`update`/`upsert` handle relation items that already exist (matched by `pk`) and, for to-many relations, items that were **not** included in the payload:
 
 - **`"add"`** — only creates/connects/upserts the items you send. Existing items that aren't in the payload are left untouched.
 - **`"set"`** — same as `"add"`, but also removes what wasn't sent: for `otm` it runs a `deleteMany` on the items missing from the array; for `mtm` it resets the join (`set: []`) before reconnecting; for `oto`/`mto` sending `null` disconnects/deletes the relation (see below).
 
-### `pk` and `nullable`
+#### `pk` and `nullable`
 
 - **`pk`** — the field used to identify an existing related record. An item **with** `pk` in the payload becomes a `connectOrCreate`/`upsert`; an item **without** it becomes a plain `create`.
 - **`nullable`** — only relevant for `mto`. When `true`, sending `null` for the field resolves to `disconnect` on update. For `oto` with `restriction: "set"`, sending `null` resolves to `delete` instead (an `oto` side can't just be "disconnected", the owned row is removed).
 
-### How each write method resolves relations
+#### How each write method resolves relations
 
 | Method | Relations |
 | --- | --- |
 | `create` | `create`/`connectOrCreate` only (no upsert — there's nothing to update yet) |
 | `update` / `upsert` (`update` half) / `save` (upsert branch) | Full resolution: `create`/`connectOrCreate`/`upsert`/`disconnect`/`delete`/`deleteMany`/`set`, per `mode`/`restriction` |
 | `createMany` / `updateMany` / `updateManyReturning` | Not supported — throws a `VSRepoPrisma7AdapterError` naming the offending field if the payload contains a configured relation |
+
+### `relations` in method options (read)
+
+This is the `relations` you pass in the `options` of a `VSRepository` method (`get`, `find`, `findOne`, etc.). The shape is much simpler: an object where each relation field accepts:
+
+- `true` — load the relation as-is;
+- or another `relations` object — for nested eager loading (relations of the relation).
+
+```typescript
+const user = await userRepository.get(
+    { id: "..." },
+    {
+        relations: {
+            posts: true,                   // fetch posts along
+            author: { profile: true },     // and, inside author, its profile (nested eager loading)
+        },
+    }
+);
+```
+
+This object is turned into a Prisma `include` by the adapter (`parsePrismaInclude`). It does **not** use the constructor's `relations` config: it's purely a read-side option and works even with no `relations` in the config.
+
+The `select` and `relations` you pass in the options are turned into a Prisma `select` (`parsePrismaSelect`) and a Prisma `include` (`parsePrismaInclude`), respectively. When `select` is provided, the `include` derived from `relations` is discarded (`undefined`), because Prisma doesn't allow combining `include` and `select` in a single query. In other words, if you're already using `select`, the `relations` object becomes redundant — so it's optional. Here's the resolved logic (from `resolveReadArg`):
+
+```ts
+const prismaSelect = options.select && parsePrismaSelect(options.select);
+const prismaInclude = prismaSelect
+    ? undefined
+    : options.relations && parsePrismaInclude(options.relations);
+```
 
 ## `merge`
 
@@ -149,7 +191,10 @@ For to-many relations (`otm`/`mtm`), items in the stored record and items in `ob
 
 ## Transactions
 
-Methods that need to run more than one Prisma operation atomically (`saveMany`, `deleteManyReturning`) accept `options.db`. If `options.db` is already an active transaction client, it's reused directly — no nested transaction is started; otherwise, a new transaction is created (on `options.db` if provided, or on the root client otherwise).
+**Every** method accepts `options.db` and runs its operation on the client/transaction you pass — the difference is in **how** each one treats it:
+
+- Most methods (single, one-call Prisma operations) simply run directly on `options?.db`: hand them a transaction client and the call participates in that transaction, starting nothing new.
+- `saveMany` and `deleteManyReturning` need to run **more than one** Prisma operation atomically (`saveMany` saves each record individually; `deleteManyReturning` does a `findMany` + `deleteMany`), so they go through `runTransactional`. If `options.db` is already an active transaction client, it's reused — no nested transaction is started; otherwise, a new transaction is created (on `options.db` if provided, or on the root client otherwise).
 
 A transaction client is told apart from the root `PrismaClient` by the `$on` method: Prisma's root client exposes it (for event listeners), the interactive transaction client doesn't. This is what `Prisma7ClientLike`/`Prisma7OrmTypes` encode in their types.
 
