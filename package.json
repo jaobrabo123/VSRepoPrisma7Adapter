@@ -14,7 +14,7 @@
   "type": "commonjs",
   "peerDependencies": {
     "@prisma/client": "^7.10.0",
-    "vsrepo": "file:vsrepo-1.4.0.tgz"
+    "vsrepo": "file:vsrepo-2.0.0.tgz"
   },
   "dependencies": {
     "deepmerge": "^4.3.1",
@@ -35,8 +35,8 @@
     "jest": "^30.5.0",
     "pg": "^8.23.0",
     "prisma": "^7.10.0",
-    "tsx": "^4.23.12",
     "reflect-metadata": "^0.2.2",
+    "tsx": "^4.23.12",
     "typescript": "^7.0.2"
   }
 }

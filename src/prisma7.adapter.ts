@@ -1,4 +1,5 @@
 import {
+    AdapterErrorCode,
     AdapterMethodOptions,
     AdapterQueryOptions,
     CountResult,
@@ -6,6 +7,7 @@ import {
     VSLogger,
     VSLogLevel,
     VSRepoAdapter,
+    VSRepoAdapterError,
     VSRepoWhere,
 } from "vsrepo";
 import { parsePrismaWhere } from "./parsers/where.parser";
@@ -14,13 +16,13 @@ import { parsePrismaSelect } from "./parsers/select.parser";
 import { parsePrismaOrderBy } from "./parsers/order-by.parser";
 import { parsePrismaWriteData } from "./parsers/data.parser";
 import { mergeEntities } from "./resolvers/merge-entities.resolver";
+import { mapPrismaError } from "./resolvers/map-prisma-error.resolver";
 import { validateAdapterConfig } from "./validators/validate-adapter-config.validator";
 import { AdapterRelations } from "./types/adapter-relations.type";
 import { VSRepoPrisma7AdapterConfig } from "./types/adapter-config.type";
 import { PrismaArgLike } from "./types/prisma-arg-like.type";
 import { PrismaRepositoryLike } from "./types/prisma-repository-like.type";
 import { PlainObject } from "./types/plain-object.type";
-import { VSRepoPrisma7AdapterError } from "./errors/vsrepo-prisma7-adapter.error";
 
 /**
  * `VSRepoAdapter` implementation for Prisma 7. Translates every method of the
@@ -29,6 +31,11 @@ import { VSRepoPrisma7AdapterError } from "./errors/vsrepo-prisma7-adapter.error
  * `relations` config is provided — resolving relation fields on `create`/
  * `update`/`upsert`/`merge` the same way the v1 of VSRepository did (see
  * `Relation`).
+ *
+ * Every method always rejects with a `VSRepoAdapterError` — any error raised
+ * by Prisma (or by the adapter itself) is translated through `mapPrismaError`
+ * before leaving the adapter, so callers never have to deal with a raw
+ * Prisma/driver error shape.
  *
  * @template T Entity type this adapter operates on.
  *
@@ -91,8 +98,9 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
     /**
      * Strips relation fields from a payload — used by `createMany`/`updateMany`/
      * `updateManyReturning`, since those Prisma operations don't support nested
-     * writes (scalar fields only). Throws a `VSRepoPrisma7AdapterError` when a
-     * configured relation field is present, instead of silently ignoring it.
+     * writes (scalar fields only). Throws a `VSRepoAdapterError` (code
+     * `NOT_SUPPORTED`) instead of silently ignoring the field, when a configured
+     * relation field is present in the payload.
      */
     private stripRelationFields(obj: PlainObject): PlainObject {
         if (!this.relations) return obj;
@@ -103,8 +111,10 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
             if (value === undefined) continue;
 
             if (key in (this.relations as PlainObject)) {
-                throw new VSRepoPrisma7AdapterError(
+                throw new VSRepoAdapterError(
                     `Field '${key}' is a configured relation, but Prisma's *Many operations don't support nested relation writes.`,
+                    AdapterErrorCode.NOT_SUPPORTED,
+                    null,
                 );
             }
 
@@ -150,7 +160,11 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
         fn: (tx: any) => Promise<R>,
         options?: { isolationLevel?: any },
     ): Promise<R> {
-        return this.prisma.$transaction(fn, options);
+        try {
+            return await this.prisma.$transaction(fn, options);
+        } catch (error) {
+            throw mapPrismaError(error, "runInTransaction");
+        }
     }
 
     /** Fetches a single record matching `where`. */
@@ -165,6 +179,8 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
             this.logger.logDebug("Resolved Prisma arg for 'findOne'", arg);
 
             return await this.getPrismaRepository(options?.db).findFirst(arg);
+        } catch (error) {
+            throw mapPrismaError(error, "findOne");
         } finally {
             this.logger.endPerformLog(start);
         }
@@ -182,6 +198,8 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
             this.logger.logDebug("Resolved Prisma arg for 'findOneOrThrow'", arg);
 
             return await this.getPrismaRepository(options?.db).findFirstOrThrow(arg);
+        } catch (error) {
+            throw mapPrismaError(error, "findOneOrThrow");
         } finally {
             this.logger.endPerformLog(start);
         }
@@ -199,6 +217,8 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
             this.logger.logDebug("Resolved Prisma arg for 'findMany'", arg);
 
             return await this.getPrismaRepository(options?.db).findMany(arg);
+        } catch (error) {
+            throw mapPrismaError(error, "findMany");
         } finally {
             this.logger.endPerformLog(start);
         }
@@ -227,6 +247,8 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
             this.logger.logDebug("Resolved Prisma arg for 'save' (upsert)", arg);
 
             return await repo.upsert(arg);
+        } catch (error) {
+            throw mapPrismaError(error, "save");
         } finally {
             this.logger.endPerformLog(start);
         }
@@ -249,6 +271,8 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
             return await this.runTransactional(options?.db, tx =>
                 Promise.all(objs.map(obj => this.save(obj, { ...options, db: tx }))),
             );
+        } catch (error) {
+            throw mapPrismaError(error, "saveMany");
         } finally {
             this.logger.endPerformLog(start);
         }
@@ -263,6 +287,8 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
             this.logger.logDebug("Resolved Prisma arg for 'delete'", arg);
 
             return await this.getPrismaRepository(options?.db).delete(arg);
+        } catch (error) {
+            throw mapPrismaError(error, "delete");
         } finally {
             this.logger.endPerformLog(start);
         }
@@ -280,6 +306,8 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
             this.logger.logDebug("Resolved Prisma arg for 'deleteMany'", arg);
 
             return await this.getPrismaRepository(options?.db).deleteMany(arg);
+        } catch (error) {
+            throw mapPrismaError(error, "deleteMany");
         } finally {
             this.logger.endPerformLog(start);
         }
@@ -313,6 +341,8 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
                 await repo.deleteMany(deleteArg);
                 return records;
             });
+        } catch (error) {
+            throw mapPrismaError(error, "deleteManyReturning");
         } finally {
             this.logger.endPerformLog(start);
         }
@@ -340,6 +370,8 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
             this.logger.logDebug("Resolved Prisma arg for 'update'", arg);
 
             return await this.getPrismaRepository(options?.db).update(arg);
+        } catch (error) {
+            throw mapPrismaError(error, "update");
         } finally {
             this.logger.endPerformLog(start);
         }
@@ -359,6 +391,8 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
             this.logger.logDebug("Resolved Prisma arg for 'updateMany'", arg);
 
             return await this.getPrismaRepository(options?.db).updateMany(arg);
+        } catch (error) {
+            throw mapPrismaError(error, "updateMany");
         } finally {
             this.logger.endPerformLog(start);
         }
@@ -397,6 +431,8 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
                     where: { [this.pkName]: { in: idsUpdated } },
                 });
             });
+        } catch (error) {
+            throw mapPrismaError(error, "updateManyReturning");
         } finally {
             this.logger.endPerformLog(start);
         }
@@ -411,6 +447,8 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
             this.logger.logDebug("Resolved Prisma arg for 'count'", arg);
 
             return await this.getPrismaRepository(options?.db).count(arg);
+        } catch (error) {
+            throw mapPrismaError(error, "count");
         } finally {
             this.logger.endPerformLog(start);
         }
@@ -429,6 +467,8 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
 
             const result = await this.getPrismaRepository(options?.db).findFirst(arg);
             return result !== null;
+        } catch (error) {
+            throw mapPrismaError(error, "exists");
         } finally {
             this.logger.endPerformLog(start);
         }
@@ -448,6 +488,8 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
             return modifying
                 ? await db.$executeRawUnsafe(query, ...args)
                 : await db.$queryRawUnsafe(query, ...args);
+        } catch (error) {
+            throw mapPrismaError(error, "query");
         } finally {
             this.logger.endPerformLog(start);
         }
@@ -467,6 +509,8 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
             this.logger.logDebug("Resolved Prisma arg for 'create'", arg);
 
             return await this.getPrismaRepository(options?.db).create(arg);
+        } catch (error) {
+            throw mapPrismaError(error, "create");
         } finally {
             this.logger.endPerformLog(start);
         }
@@ -489,6 +533,8 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
             this.logger.logDebug("Resolved Prisma arg for 'createMany'", arg);
 
             return await this.getPrismaRepository(options?.db).createMany(arg);
+        } catch (error) {
+            throw mapPrismaError(error, "createMany");
         } finally {
             this.logger.endPerformLog(start);
         }
@@ -515,6 +561,8 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
             if (!result) return null as unknown as K & T;
 
             return mergeEntities(result, obj as PlainObject, this.relations) as K & T;
+        } catch (error) {
+            throw mapPrismaError(error, "merge");
         } finally {
             this.logger.endPerformLog(start);
         }
@@ -551,6 +599,8 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
             this.logger.logDebug("Resolved Prisma arg for 'upsert'", arg);
 
             return await this.getPrismaRepository(options?.db).upsert(arg);
+        } catch (error) {
+            throw mapPrismaError(error, "upsert");
         } finally {
             this.logger.endPerformLog(start);
         }

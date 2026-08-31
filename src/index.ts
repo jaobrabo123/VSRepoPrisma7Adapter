@@ -1,4 +1,3 @@
-export { VSRepoPrisma7AdapterError } from "./errors/vsrepo-prisma7-adapter.error";
 export { VSRepoPrisma7Adapter } from "./prisma7.adapter";
 
 export type { Relation } from "./types/relation.type";
