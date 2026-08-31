@@ -6,8 +6,8 @@
 // "prisma" mínimo/falso para não depender de um banco real.
 
 import { describe, it, expect } from "@jest/globals";
-import { VSLogLevel } from "vsrepo";
-import { VSRepoPrisma7Adapter, VSRepoPrisma7AdapterError } from "../src";
+import { AdapterErrorCode, VSLogLevel, VSRepoAdapterError } from "vsrepo";
+import { VSRepoPrisma7Adapter } from "../src";
 import { User } from "./helpers/entities";
 import { createFakePrisma } from "./helpers/fake-prisma";
 
@@ -17,25 +17,25 @@ describe("VSRepoPrisma7Adapter — validação da config do construtor", () => {
     it("é lançado quando a config não tem 'tableName'", () => {
         expect(() => {
             new VSRepoPrisma7Adapter<User>(fakePrisma, { pkName: "id" } as any);
-        }).toThrow(VSRepoPrisma7AdapterError);
+        }).toThrow(VSRepoAdapterError);
     });
 
     it("é lançado quando 'tableName' é uma string vazia", () => {
         expect(() => {
             new VSRepoPrisma7Adapter<User>(fakePrisma, { tableName: "", pkName: "id" });
-        }).toThrow(VSRepoPrisma7AdapterError);
+        }).toThrow(VSRepoAdapterError);
     });
 
     it("é lançado quando a config não tem 'pkName'", () => {
         expect(() => {
             new VSRepoPrisma7Adapter<User>(fakePrisma, { tableName: "user" } as any);
-        }).toThrow(VSRepoPrisma7AdapterError);
+        }).toThrow(VSRepoAdapterError);
     });
 
     it("é lançado quando 'pkName' é uma string vazia", () => {
         expect(() => {
             new VSRepoPrisma7Adapter<User>(fakePrisma, { tableName: "user", pkName: "" as any });
-        }).toThrow(VSRepoPrisma7AdapterError);
+        }).toThrow(VSRepoAdapterError);
     });
 
     it("não lança quando a config é válida e mínima (só tableName + pkName)", () => {
@@ -51,7 +51,7 @@ describe("VSRepoPrisma7Adapter — validação da config do construtor", () => {
                 pkName: "id",
                 logLevel: "NOT_A_LEVEL" as any,
             });
-        }).toThrow(VSRepoPrisma7AdapterError);
+        }).toThrow(VSRepoAdapterError);
     });
 
     it("aceita um 'logLevel' válido", () => {
@@ -71,7 +71,7 @@ describe("VSRepoPrisma7Adapter — validação da config do construtor", () => {
                 pkName: "id",
                 relations: { address: { restriction: "set", pk: "id" } } as any,
             });
-        }).toThrow(VSRepoPrisma7AdapterError);
+        }).toThrow(VSRepoAdapterError);
     });
 
     it("é lançado quando uma relation tem 'mode' fora do picklist", () => {
@@ -83,7 +83,7 @@ describe("VSRepoPrisma7Adapter — validação da config do construtor", () => {
                     address: { mode: "one-to-one", restriction: "set", pk: "id" },
                 } as any,
             });
-        }).toThrow(VSRepoPrisma7AdapterError);
+        }).toThrow(VSRepoAdapterError);
     });
 
     it("é lançado quando uma relation tem 'restriction' fora do picklist", () => {
@@ -95,7 +95,7 @@ describe("VSRepoPrisma7Adapter — validação da config do construtor", () => {
                     posts: { mode: "otm", restriction: "merge", pk: "id" },
                 } as any,
             });
-        }).toThrow(VSRepoPrisma7AdapterError);
+        }).toThrow(VSRepoAdapterError);
     });
 
     it("é lançado quando uma relation tem uma chave desconhecida (strictObject)", () => {
@@ -107,7 +107,7 @@ describe("VSRepoPrisma7Adapter — validação da config do construtor", () => {
                     address: { mode: "oto", restriction: "set", pk: "id", cascade: true },
                 } as any,
             });
-        }).toThrow(VSRepoPrisma7AdapterError);
+        }).toThrow(VSRepoAdapterError);
     });
 
     it("aceita relations válidas cobrindo oto, otm e mtm", () => {
@@ -123,22 +123,23 @@ describe("VSRepoPrisma7Adapter — validação da config do construtor", () => {
         }).not.toThrow();
     });
 
-    it("a mensagem de erro aponta o campo inválido", () => {
+    it("a mensagem de erro aponta o campo inválido, e o 'code' é 'INVALID_ADAPTER_CONFIG'", () => {
         try {
             new VSRepoPrisma7Adapter<User>(fakePrisma, { pkName: "id" } as any);
-            throw new Error("deveria ter lançado VSRepoPrisma7AdapterError");
+            throw new Error("deveria ter lançado VSRepoAdapterError");
         } catch (err) {
-            expect(err).toBeInstanceOf(VSRepoPrisma7AdapterError);
+            expect(err).toBeInstanceOf(VSRepoAdapterError);
             expect((err as Error).message).toContain("tableName");
+            expect((err as VSRepoAdapterError).code).toBe(AdapterErrorCode.INVALID_ADAPTER_CONFIG);
         }
     });
 
-    it("tem 'name' igual a 'VSRepoPrisma7AdapterError'", () => {
+    it("tem 'name' igual a 'VSRepoAdapterError'", () => {
         try {
             new VSRepoPrisma7Adapter<User>(fakePrisma, {} as any);
-            throw new Error("deveria ter lançado VSRepoPrisma7AdapterError");
+            throw new Error("deveria ter lançado VSRepoAdapterError");
         } catch (err) {
-            expect((err as Error).name).toBe("VSRepoPrisma7AdapterError");
+            expect((err as Error).name).toBe("VSRepoAdapterError");
         }
     });
 });

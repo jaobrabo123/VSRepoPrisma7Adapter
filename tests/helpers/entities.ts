@@ -7,32 +7,10 @@
 // Prisma (`prisma generate` precisa de rede irrestrita), replicamos aqui só o
 // formato dos modelos que os testes precisam, em vez do client gerado.
 
-export interface Address {
-    id: number;
-    street: string;
-    city: string;
-    country: string;
-    userId: number;
-}
+import { PostGetPayload, UserGetPayload } from "../../generated/prisma/models";
 
-export interface Tag {
-    id: number;
-    name: string;
-}
+export type User = UserGetPayload<{
+    include: { address: true; posts: { include: { tags: true } } };
+}>;
 
-export interface Post {
-    id: number;
-    title: string;
-    content: string | null;
-    published: boolean;
-    authorId: number;
-    tags?: Tag[];
-}
-
-export interface User {
-    id: number;
-    email: string;
-    name: string | null;
-    posts?: Post[];
-    address?: Address | null;
-}
+export type Post = PostGetPayload<{ include: { tags: true } }>;

@@ -98,6 +98,8 @@ async function example() {
 
     const removed = await userRepository.deleteManyReturningByIdIn(vsrepoUsers.map(u => u.id));
     console.log(removed);
+
+    await prisma.$disconnect();
 }
 
 example();

@@ -21,9 +21,9 @@
     "valibot": "^1.4.2"
   },
   "devDependencies": {
-    "@babel/core": "^8.0.1",
-    "@babel/preset-env": "^8.0.2",
-    "@babel/preset-typescript": "^8.0.1",
+    "@babel/core": "^7.29.7",
+    "@babel/preset-env": "^7.29.7",
+    "@babel/preset-typescript": "^7.29.7",
     "@jest/globals": "^30.5.0",
     "@prisma/adapter-pg": "^7.10.0",
     "@types/jest": "^30.0.0",
@@ -35,7 +35,6 @@
     "jest": "^30.5.0",
     "pg": "^8.23.0",
     "prisma": "^7.10.0",
-    "reflect-metadata": "^0.2.2",
     "tsx": "^4.23.12",
     "typescript": "^7.0.2"
   }
