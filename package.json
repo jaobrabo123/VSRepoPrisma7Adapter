@@ -1,17 +1,52 @@
 {
   "name": "@vsrepo/prisma7-adapter",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "VSRepository adapter implementation backed by Prisma 7, translating every VSRepository operation into Prisma Client calls.",
+  "homepage": "https://github.com/jaobrabo123/VSRepoPrisma7Adapter#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaobrabo123/VSRepoPrisma7Adapter.git"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "type": "commonjs",
+  "files": [
+    "dist",
+    "README.md",
+    "README.pt-BR.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
+    "clean": "node -e \"fs.rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "prepack": "npm run build",
+    "typecheck": "tsc --noEmit -p tsconfig.build.json",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --watch",
     "test:types": "tsc --noEmit -p tests/tsconfig.json"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
+  "keywords": [
+    "prisma",
+    "prisma7",
+    "repository",
+    "orm",
+    "typescript",
+    "repository-pattern",
+    "vsrepo",
+    "vsrepository",
+    "adapter"
+  ],
+  "author": "João Pedro Azevedo Freire Mecenas",
+  "license": "MIT",
   "peerDependencies": {
     "@prisma/client": "^7.10.0",
     "vsrepo": "file:vsrepo-2.0.0.tgz"

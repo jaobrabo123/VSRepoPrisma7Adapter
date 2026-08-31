@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    // As declaracoes de tipo sao geradas automaticamente pelo tsc a partir do `src/`.
+    "declaration": true,
+    "declarationMap": false,
+    "sourceMap": false
+  },
+  // Apenas o nucleo do adaptador (src/) e empacotado. Scripts de exemplo e os
+  // testes ficam fora do build do pacote.
+  "include": ["src/**/*"]
+}
