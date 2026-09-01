@@ -200,7 +200,7 @@ For to-many relations (`otm`/`mtm`), items in the stored record and items in `ob
 
 `createMany`, `createManyReturning`, `updateMany` and `updateManyReturning` only accept scalar fields in their `data`. If your payload includes a field configured in `relations` (regardless of its value), the adapter throws a `VSRepoPrisma7AdapterError` naming the offending field. For a full nested write, use `create`/`update`/`save` one record at a time, or wrap several `save` calls in a `saveMany`/`transaction`.
 
-> Note on return order: `createManyReturning` and `updateManyReturning` don't guarantee the returned records follow the order of the input payload (`objs`/`obj`). Their result comes from a second `findMany` (re-querying the inserted/updated rows by primary key), so the order is only guaranteed when you pass `order` in the options.
+> Note on return order: `createManyReturning` don't guarantee the returned records follow the order of the input payload (`objs`). Their result comes from a second `findMany` (re-querying the inserted/updated rows by primary key), so the order is only guaranteed when you pass `order` in the options.
 
 ## Transactions
 
