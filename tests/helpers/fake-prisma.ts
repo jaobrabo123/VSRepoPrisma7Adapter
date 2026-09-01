@@ -12,6 +12,7 @@ export function createFakeDelegate() {
         findMany: jest.fn(),
         create: jest.fn(),
         createMany: jest.fn(),
+        createManyAndReturn: jest.fn(),
         update: jest.fn(),
         updateMany: jest.fn(),
         updateManyAndReturn: jest.fn(),

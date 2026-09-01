@@ -10,6 +10,7 @@ export type PrismaRepositoryLike = {
     findMany: AnyFn;
     create: AnyFn;
     createMany: AnyFn;
+    createManyAndReturn: AnyFn;
     update: AnyFn;
     updateMany: AnyFn;
     updateManyAndReturn: AnyFn;

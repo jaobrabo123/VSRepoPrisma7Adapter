@@ -487,6 +487,60 @@ describe("VSRepoPrisma7Adapter (integração com Postgres real)", () => {
         });
     });
 
+    describe("createManyReturning", () => {
+        it("cria vários registros de uma vez e devolve os registros criados", async () => {
+            const result = await userAdapter.createManyReturning([
+                { email: "a@example.com", name: "A" },
+                { email: "b@example.com", name: "B" },
+            ]);
+
+            expect(result).toHaveLength(2);
+            expect(result.map(u => u.name).sort()).toEqual(["A", "B"]);
+            expect(await prisma.user.count()).toBe(2);
+        });
+
+        it("'ignoreConflicts: true' não devolve os registros não inseridos (duplicados)", async () => {
+            await createUser({ email: "duplicado@example.com" });
+
+            const result = await userAdapter.createManyReturning(
+                [
+                    { email: "duplicado@example.com", name: "Duplicado" },
+                    { email: "novo@example.com", name: "Novo" },
+                ],
+                { ignoreConflicts: true },
+            );
+
+            expect(result).toHaveLength(1); // só o "novo@example.com" foi inserido
+            expect(result[0]?.email).toBe("novo@example.com");
+            expect(await prisma.user.count()).toBe(2);
+        });
+
+        it("lança 'VSRepoAdapterError' (code NOT_SUPPORTED) se um objeto trouxer um campo de relação configurada", async () => {
+            const author = await createUser({ email: "autor@example.com", name: "Autor" });
+            const tag = await createTag({ name: "ts" });
+            const postAdapter = new VSRepoPrisma7Adapter<Post>(prisma, {
+                tableName: "post",
+                pkName: "id",
+                logLevel: VSLogLevel.ERROR,
+                relations: { tags: { mode: "mtm", restriction: "set", pk: "id" } },
+            });
+
+            await expect(
+                postAdapter.createManyReturning([
+                    { title: "x", authorId: author.id, tags: [tag] },
+                ]),
+            ).rejects.toThrow(VSRepoAdapterError);
+
+            try {
+                await postAdapter.createManyReturning([
+                    { title: "x", authorId: author.id, tags: [tag] },
+                ]);
+            } catch (err) {
+                expect((err as VSRepoAdapterError).code).toBe(AdapterErrorCode.NOT_SUPPORTED);
+            }
+        });
+    });
+
     describe("query (raw)", () => {
         it("usa consulta somente-leitura por padrão ('modifying: false')", async () => {
             await createUser({ email: "a@example.com" });

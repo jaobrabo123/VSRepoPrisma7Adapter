@@ -541,6 +541,43 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
     }
 
     /**
+     * Creates multiple records in a single operation, returning the created records.
+     */
+    public async createManyReturning(
+        objs: DeepPartial<T>[],
+        options?: AdapterMethodOptions<T> & { ignoreConflicts?: boolean },
+    ): Promise<T[]> {
+        const start = this.logger.startPerformLog("createManyReturning");
+
+        try {
+            const data = objs.map(obj => this.stripRelationFields(obj as PlainObject));
+            const readArg = this.resolveReadArg(options);
+            const arg = { data, skipDuplicates: options?.ignoreConflicts };
+            this.logger.logDebug("Resolved Prisma arg for 'createManyReturning'", arg);
+
+            return await this.runTransactional(options?.db, async tx => {
+                const repo = this.getPrismaRepository(tx);
+                const created = await repo.createManyAndReturn({
+                    ...arg,
+                    include: undefined,
+                    select: { [this.pkName]: true },
+                });
+
+                const idsCreated = created.map((_: any) => _[this.pkName]);
+
+                return repo.findMany({
+                    ...readArg,
+                    where: { [this.pkName]: { in: idsCreated } },
+                });
+            });
+        } catch (error) {
+            throw mapPrismaError(error, "createManyReturning");
+        } finally {
+            this.logger.endPerformLog(start);
+        }
+    }
+
+    /**
      * Fetches the record matching `where` and returns it deep-merged with
      * `obj`, WITHOUT persisting anything — same behavior the v1 of
      * VSRepository had (see `mergeEntities`). It's on the caller to decide

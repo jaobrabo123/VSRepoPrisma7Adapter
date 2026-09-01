@@ -33,7 +33,7 @@
     - [How each write method resolves relations](#how-each-write-method-resolves-relations)
   - [`relations` in method options (read)](#relations-in-method-options-read)
 - [`merge`](#merge)
-- [`createMany`/`updateMany`/`updateManyReturning` don't support nested writes](#createmanyupdatemanyupdatemanyreturning-dont-support-nested-writes)
+- [`createMany`/`createManyReturning`/`updateMany`/`updateManyReturning` don't support nested writes](#createmanycreatemanyreturningupdatemanyupdatemanyreturning-dont-support-nested-writes)
 - [Transactions](#transactions)
 - [Logging](#logging)
 - [Requirements](#requirements)
@@ -158,7 +158,7 @@ Controls how `save`/`update`/`upsert` handle relation items that already exist (
 | --- | --- |
 | `create` | `create`/`connectOrCreate` only (no upsert — there's nothing to update yet) |
 | `update` / `upsert` (`update` half) / `save` (upsert branch) | Full resolution: `create`/`connectOrCreate`/`upsert`/`disconnect`/`delete`/`deleteMany`/`set`, per `mode`/`restriction` |
-| `createMany` / `updateMany` / `updateManyReturning` | Not supported — throws a `VSRepoPrisma7AdapterError` naming the offending field if the payload contains a configured relation |
+| `createMany` / `createManyReturning` / `updateMany` / `updateManyReturning` | Not supported — throws a `VSRepoPrisma7AdapterError` naming the offending field if the payload contains a configured relation |
 
 ### `relations` in method options (read)
 
@@ -196,16 +196,18 @@ const prismaInclude = prismaSelect
 
 For to-many relations (`otm`/`mtm`), items in the stored record and items in `obj` are matched by the configured `pk`: a match merges the two items, a new `pk` (or no `pk`) is appended. Nothing is ever removed by `merge`.
 
-## `createMany`/`updateMany`/`updateManyReturning` don't support nested writes
+## `createMany`/`createManyReturning`/`updateMany`/`updateManyReturning` don't support nested writes
 
-`createMany`, `updateMany`, and `updateManyAndReturn` only accept scalar fields in their `data`. If your payload includes a field configured in `relations` (regardless of its value), the adapter throws a `VSRepoPrisma7AdapterError` naming the offending field. For a full nested write, use `create`/`update`/`save` one record at a time, or wrap several `save` calls in a `saveMany`/`transaction`.
+`createMany`, `createManyReturning`, `updateMany` and `updateManyReturning` only accept scalar fields in their `data`. If your payload includes a field configured in `relations` (regardless of its value), the adapter throws a `VSRepoPrisma7AdapterError` naming the offending field. For a full nested write, use `create`/`update`/`save` one record at a time, or wrap several `save` calls in a `saveMany`/`transaction`.
+
+> Note on return order: `createManyReturning` and `updateManyReturning` don't guarantee the returned records follow the order of the input payload (`objs`/`obj`). Their result comes from a second `findMany` (re-querying the inserted/updated rows by primary key), so the order is only guaranteed when you pass `order` in the options.
 
 ## Transactions
 
 **Every** method accepts `options.db` and runs its operation on the client/transaction you pass — the difference is in **how** each one treats it:
 
 - Most methods (single, one-call Prisma operations) simply run directly on `options?.db`: hand them a transaction client and the call participates in that transaction, starting nothing new.
-- `saveMany` and `deleteManyReturning` need to run **more than one** Prisma operation atomically (`saveMany` saves each record individually; `deleteManyReturning` does a `findMany` + `deleteMany`), so they go through `runTransactional`. If `options.db` is already an active transaction client, it's reused — no nested transaction is started; otherwise, a new transaction is created (on `options.db` if provided, or on the root client otherwise).
+- `saveMany`, `updateManyReturning`, `createManyReturning` and `deleteManyReturning` need to run **more than one** Prisma operation atomically (`saveMany` saves each record individually; `updateManyReturning`/`createManyReturning` do an `updateManyAndReturn`/`createManyAndReturn` + `findMany`; `deleteManyReturning` does a `findMany` + `deleteMany`), so they go through `runTransactional`. If `options.db` is already an active transaction client, it's reused — no nested transaction is started; otherwise, a new transaction is created (on `options.db` if provided, or on the root client otherwise).
 
 A transaction client is told apart from the root `PrismaClient` by the `$on` method: Prisma's root client exposes it (for event listeners), the interactive transaction client doesn't. This is what `Prisma7ClientLike`/`Prisma7OrmTypes` encode in their types.
 
@@ -213,8 +215,9 @@ A transaction client is told apart from the root `PrismaClient` by the `$on` met
 await userRepository.transaction(async tx => {
     // Every repository call made with `{ db: tx }` inside this callback
     // shares the same transaction — including calls to `saveMany`/
-    // `deleteManyReturning`, which will detect `tx` is already a
-    // transaction and run directly on it instead of nesting a new one.
+    // `updateManyReturning`/`createManyReturning`/`deleteManyReturning`, which
+    // will detect `tx` is already a transaction and run directly on it instead
+    // of nesting a new one.
     await userRepository.save(user, { db: tx });
     await userRepository.saveList(otherUsers, { db: tx });
 });
