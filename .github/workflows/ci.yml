@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Evita rodar duas vezes o mesmo PR quando novos commits chegam.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    # Postgres real: os testes de `tests/prisma7.adapter.test.ts` rodam
+    # contra ele (não são mocks) — ver `tests/helpers/db.ts`.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: vsrepo
+          POSTGRES_PASSWORD: vsrepo
+          POSTGRES_DB: vsrepo_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vsrepo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://vsrepo:vsrepo@localhost:5432/vsrepo_test?schema=public
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply database migrations
+        run: npx prisma migrate deploy
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run tests
+        run: npm test
+
+      - name: Type-check tests
+        run: npm run test:types
