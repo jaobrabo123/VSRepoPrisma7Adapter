@@ -10,24 +10,38 @@
 // Prisma Client, e o resultado volta passando pelas duas camadas — incluindo
 // `transaction()` compartilhando o client entre repositórios diferentes.
 //
-// NOTA sobre `@DynamicMethod`/`@QueryMethod`: não são cobertos aqui de
-// propósito. Esses decorators usam campos `declare` (ver `example.ts`), e o
-// babel-jest deste repo (usado no lugar do ts-jest só por causa do
-// compilador nativo do TS 7 — ver comentário no `jest.config.js`) não
-// suporta a combinação `declare` + decorators legacy: uma classe com esses
-// campos já quebra o parse do arquivo inteiro no jest, mesmo o campo nunca
-// sendo chamado. `tsc`/`test:types` aceita o padrão numa boa (é só o
-// babel-jest que não), então essa cobertura fica de fora até esse gap de
-// tooling ser resolvido — se quiser, dá pra abrir isso como um follow-up
-// separado (ex.: um jest project à parte rodando via ts-jest só pra esse
-// caso).
+// NOTA sobre `@DynamicMethod`/`@QueryMethod`: em vez do padrão do
+// `example.ts` (campo `declare` + decorator syntax), aqui os métodos são
+// registrados de forma imperativa logo após a classe — ex.:
+// `DynamicMethod()(UserRepository.prototype, "findOneByEmail")` — com a
+// assinatura do método adicionada via declaration merging
+// (`interface UserRepository { findOneByEmail(...): ...; }`).
+// Isso faz exatamente o que o decorator faria (`Reflect.defineMetadata` no
+// prototype, lido pelo `VSRepository` no construtor), sem passar pelo campo
+// `declare`, que é o que quebra o parse no babel-jest deste repo: a
+// combinação `declare` + decorators legacy não é suportada pelo
+// `@babel/plugin-proposal-decorators` (usado no lugar do `ts-jest` só por
+// causa do compilador nativo do TS 7 — ver comentário no `jest.config.js`).
+// `tsc`/`test:types` aceita os dois padrões numa boa, é só o babel-jest que
+// não aceita `declare` + decorator. Validado ponta a ponta contra o
+// `VSRepository` real (dynamic methods e query methods, `modifying: true` e
+// `false`) antes de escrever os testes abaixo.
 //
 // Requer `DATABASE_URL` apontando pra um banco com as migrations aplicadas
 // e o Prisma Client gerado — ver README/CI (mesmo setup do
 // `prisma7.adapter.test.ts`).
 
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from "@jest/globals";
-import { AdapterErrorCode, VSLogLevel, VSRepoAdapterError, VSRepository } from "vsrepo";
+import {
+    AdapterErrorCode,
+    DynamicMethod,
+    MethodOptions,
+    QueryMethod,
+    QueryMethodArg,
+    VSLogLevel,
+    VSRepoAdapterError,
+    VSRepository,
+} from "vsrepo";
 import { VSRepoPrisma7Adapter, Prisma7OrmTypes } from "../src";
 import type { Prisma, PrismaClient, Tag } from "../generated/prisma/client";
 import { cleanDatabase, prisma } from "./helpers/db";
@@ -58,6 +72,40 @@ class UserRepository extends VSRepository<User, number, MyOrmTypes> {
         });
     }
 }
+
+type UserMethodOptions = MethodOptions<User, MyOrmTypes>;
+
+/**
+ * Assinaturas dos métodos registrados abaixo via `DynamicMethod()`/`QueryMethod()`
+ * — ver NOTA no topo do arquivo sobre por que são aplicados de forma
+ * imperativa em vez de `@decorator` sobre um campo `declare`.
+ */
+interface UserRepository {
+    /** Dynamic method: equivalente a `findOne({ email })`. */
+    findOneByEmail(email: string, options?: UserMethodOptions): Promise<User | null>;
+    /** Dynamic method: `findMany` com `name` filtrado por `contains`. */
+    findByNameContains(name: string, options?: UserMethodOptions): Promise<User[]>;
+    /** Dynamic method: `count` com `name` filtrado por igualdade. */
+    countByName(name: string): Promise<number>;
+    /** Query method (`modifying: false`): SELECT bruto parametrizado. */
+    findByEmailRaw(
+        arg: QueryMethodArg<[email: string]>,
+    ): Promise<{ id: number; name: string | null }[]>;
+    /** Query method (`modifying: true`): UPDATE bruto, resolve pra linhas afetadas. */
+    renameUserById(arg: QueryMethodArg<[name: string, id: number]>): Promise<number>;
+}
+
+DynamicMethod()(UserRepository.prototype, "findOneByEmail");
+DynamicMethod()(UserRepository.prototype, "findByNameContains");
+DynamicMethod()(UserRepository.prototype, "countByName");
+QueryMethod('SELECT id, name FROM "User" WHERE email = $1')(
+    UserRepository.prototype,
+    "findByEmailRaw",
+);
+QueryMethod('UPDATE "User" SET name = $1 WHERE id = $2', { modifying: true })(
+    UserRepository.prototype,
+    "renameUserById",
+);
 
 /**
  * Repositório concreto de `Post`, configurado com `tags` (mtm) — cobre a
@@ -272,6 +320,58 @@ describe("VSRepoPrisma7Adapter usado através de uma VSRepository real (integra�
 
             expect(result).toHaveLength(1);
             expect(result[0]?.id).toBe(user.id);
+        });
+    });
+
+    describe("@DynamicMethod através da VSRepository", () => {
+        it("findOneByEmail busca um registro por igualdade, delegando pro adapter", async () => {
+            await createUser({ email: "ana@example.com", name: "Ana" });
+
+            const found = await userRepository.findOneByEmail("ana@example.com");
+            expect(found?.name).toBe("Ana");
+
+            expect(await userRepository.findOneByEmail("inexistente@example.com")).toBeNull();
+        });
+
+        it("findByNameContains filtra vários registros pelo operador 'contains'", async () => {
+            await createUser({ email: "carlos@example.com", name: "Carlos" });
+            await createUser({ email: "ana@example.com", name: "Ana" });
+
+            const result = await userRepository.findByNameContains("arl");
+
+            expect(result.map(u => u.name)).toEqual(["Carlos"]);
+        });
+
+        it("countByName conta quantos registros batem com o nome informado", async () => {
+            await createUser({ email: "a@example.com", name: "Duplicado" });
+            await createUser({ email: "b@example.com", name: "Duplicado" });
+            await createUser({ email: "c@example.com", name: "Outro" });
+
+            expect(await userRepository.countByName("Duplicado")).toBe(2);
+            expect(await userRepository.countByName("Ninguém")).toBe(0);
+        });
+    });
+
+    describe("@QueryMethod através da VSRepository", () => {
+        it("findByEmailRaw (modifying: false) roda um SELECT bruto parametrizado", async () => {
+            const user = await createUser({ email: "ana@example.com", name: "Ana" });
+
+            const result = await userRepository.findByEmailRaw({ args: ["ana@example.com"] });
+
+            expect(result).toHaveLength(1);
+            expect(result[0]?.id).toBe(user.id);
+            expect(result[0]?.name).toBe("Ana");
+        });
+
+        it("renameUserById (modifying: true) roda um UPDATE bruto e resolve pra contagem de linhas afetadas", async () => {
+            const user = await createUser({ email: "ana@example.com", name: "Ana" });
+
+            const affected = await userRepository.renameUserById({ args: ["Ana Paula", user.id] });
+
+            expect(affected).toBe(1);
+            expect((await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).name).toBe(
+                "Ana Paula",
+            );
         });
     });
 
