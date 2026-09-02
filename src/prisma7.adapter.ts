@@ -61,6 +61,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
         this.logger = new VSLogger(
             validated.logLevel ?? VSLogLevel.WARN,
             this.constructor.name + "Logger",
+            validated.logSlowThresholdMs,
         );
 
         this.logger.logInfo(
@@ -172,7 +173,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
         where: VSRepoWhere<T>,
         options?: AdapterMethodOptions<T>,
     ): Promise<T | null> {
-        const start = this.logger.startPerformLog("findOne");
+        const start = this.logger.startPerformLog("run findOne");
 
         try {
             const arg = { ...this.resolveReadArg(options), where: parsePrismaWhere<T>(where) };
@@ -191,7 +192,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
         where: VSRepoWhere<T>,
         options?: AdapterMethodOptions<T>,
     ): Promise<T> {
-        const start = this.logger.startPerformLog("findOneOrThrow");
+        const start = this.logger.startPerformLog("run findOneOrThrow");
 
         try {
             const arg = { ...this.resolveReadArg(options), where: parsePrismaWhere<T>(where) };
@@ -210,7 +211,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
         where: VSRepoWhere<T>,
         options?: AdapterMethodOptions<T> & { distinct?: (keyof T)[] },
     ): Promise<T[]> {
-        const start = this.logger.startPerformLog("findMany");
+        const start = this.logger.startPerformLog("run findMany");
 
         try {
             const arg = { ...this.resolveReadArg(options), where: parsePrismaWhere<T>(where) };
@@ -226,7 +227,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
 
     /** Creates or updates (upsert) a single record. */
     public async save(obj: DeepPartial<T>, options?: AdapterMethodOptions<T>): Promise<T> {
-        const start = this.logger.startPerformLog("save");
+        const start = this.logger.startPerformLog("run save");
 
         try {
             const objAny = obj as PlainObject;
@@ -261,7 +262,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
      * `runTransactional`).
      */
     public async saveMany(objs: DeepPartial<T>[], options?: AdapterMethodOptions<T>): Promise<T[]> {
-        const start = this.logger.startPerformLog("saveMany");
+        const start = this.logger.startPerformLog("run saveMany");
 
         try {
             this.logger.logDebug(
@@ -280,7 +281,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
 
     /** Deletes a single record matching `where`. */
     public async delete(where: VSRepoWhere<T>, options?: AdapterMethodOptions<T>): Promise<T> {
-        const start = this.logger.startPerformLog("delete");
+        const start = this.logger.startPerformLog("run delete");
 
         try {
             const arg = { ...this.resolveReadArg(options), where: parsePrismaWhere<T>(where) };
@@ -299,7 +300,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
         where: VSRepoWhere<T>,
         options?: AdapterMethodOptions<T>,
     ): Promise<CountResult> {
-        const start = this.logger.startPerformLog("deleteMany");
+        const start = this.logger.startPerformLog("run deleteMany");
 
         try {
             const arg = { where: parsePrismaWhere<T>(where) };
@@ -324,7 +325,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
         where: VSRepoWhere<T>,
         options?: AdapterMethodOptions<T>,
     ): Promise<T[]> {
-        const start = this.logger.startPerformLog("deleteManyReturning");
+        const start = this.logger.startPerformLog("run deleteManyReturning");
 
         try {
             const prismaWhere = parsePrismaWhere<T>(where);
@@ -354,7 +355,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
         obj: DeepPartial<T>,
         options?: AdapterMethodOptions<T>,
     ): Promise<T> {
-        const start = this.logger.startPerformLog("update");
+        const start = this.logger.startPerformLog("run update");
 
         try {
             const { update } = parsePrismaWriteData(
@@ -383,7 +384,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
         obj: DeepPartial<T>,
         options?: AdapterMethodOptions<T>,
     ): Promise<CountResult> {
-        const start = this.logger.startPerformLog("updateMany");
+        const start = this.logger.startPerformLog("run updateMany");
 
         try {
             const data = this.stripRelationFields(obj as PlainObject);
@@ -404,7 +405,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
         obj: DeepPartial<T>,
         options?: AdapterMethodOptions<T>,
     ): Promise<T[]> {
-        const start = this.logger.startPerformLog("updateManyReturning");
+        const start = this.logger.startPerformLog("run updateManyReturning");
 
         try {
             const data = this.stripRelationFields(obj as PlainObject);
@@ -440,7 +441,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
 
     /** Returns the number of records matching `where`. */
     public async count(where: VSRepoWhere<T>, options?: AdapterMethodOptions<T>): Promise<number> {
-        const start = this.logger.startPerformLog("count");
+        const start = this.logger.startPerformLog("run count");
 
         try {
             const arg = { where: parsePrismaWhere<T>(where) };
@@ -459,7 +460,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
         where: VSRepoWhere<T>,
         options?: AdapterMethodOptions<T>,
     ): Promise<boolean> {
-        const start = this.logger.startPerformLog("exists");
+        const start = this.logger.startPerformLog("run exists");
 
         try {
             const arg = { where: parsePrismaWhere<T>(where), select: { [this.pkName]: true } };
@@ -497,7 +498,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
 
     /** Creates a single record. */
     public async create(obj: DeepPartial<T>, options?: AdapterMethodOptions<T>): Promise<T> {
-        const start = this.logger.startPerformLog("create");
+        const start = this.logger.startPerformLog("run create");
 
         try {
             const { create } = parsePrismaWriteData(
@@ -525,7 +526,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
         objs: DeepPartial<T>[],
         options?: AdapterMethodOptions<T> & { ignoreConflicts?: boolean },
     ): Promise<CountResult> {
-        const start = this.logger.startPerformLog("createMany");
+        const start = this.logger.startPerformLog("run createMany");
 
         try {
             const data = objs.map(obj => this.stripRelationFields(obj as PlainObject));
@@ -547,7 +548,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
         objs: DeepPartial<T>[],
         options?: AdapterMethodOptions<T> & { ignoreConflicts?: boolean },
     ): Promise<T[]> {
-        const start = this.logger.startPerformLog("createManyReturning");
+        const start = this.logger.startPerformLog("run createManyReturning");
 
         try {
             const data = objs.map(obj => this.stripRelationFields(obj as PlainObject));
@@ -588,7 +589,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
         obj: DeepPartial<T>,
         options?: AdapterMethodOptions<T>,
     ): Promise<K & T> {
-        const start = this.logger.startPerformLog("merge");
+        const start = this.logger.startPerformLog("run merge");
 
         try {
             const arg = { ...this.resolveReadArg(options), where: parsePrismaWhere<T>(where) };
@@ -612,7 +613,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
         update: DeepPartial<T>,
         options?: AdapterMethodOptions<T>,
     ): Promise<T> {
-        const start = this.logger.startPerformLog("upsert");
+        const start = this.logger.startPerformLog("run upsert");
 
         try {
             const parsedCreate = parsePrismaWriteData(

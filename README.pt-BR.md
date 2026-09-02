@@ -34,6 +34,7 @@ Implementação de `VSRepoAdapter` para o [VSRepository v2](https://github.com/j
   - [`relations` nas options (leitura)](#relations-nas-options-leitura)
 - [`merge`](#merge)
 - [`createMany`/`createManyReturning`/`updateMany`/`updateManyReturning` não suportam nested writes](#createmanycreatemanyreturningupdatemanyupdatemanyreturning-não-suportam-nested-writes)
+- [Limitações por provider](#limitações-por-provider)
 - [Transactions](#transactions)
 - [Logging](#logging)
 - [Requisitos](#requisitos)
@@ -201,6 +202,18 @@ Pra relations to-many (`otm`/`mtm`), os itens do registro salvo e os itens de `o
 `createMany`, `createManyReturning`, `updateMany` e `updateManyReturning` só aceitam campos escalares no `data`. Se seu payload incluir um campo configurado em `relations` (independente do valor), o adapter lança um `VSRepoPrisma7AdapterError` apontando o campo problemático. Pra um nested write completo, use `create`/`update`/`save` registro por registro, ou envolva várias chamadas de `save` num `saveMany`/`transaction`.
 
 > Nota sobre a ordem de retorno: `createManyReturning` não garante que os registros devolvidos seguem a ordem do payload de entrada (`objs`). O resultado vem de um segundo `findMany` (re-buscando as linhas inseridas/atualizadas pela primary key), então a ordem só é garantida quando você passa `order` nas options.
+
+## Limitações por provider
+
+Alguns recursos do Prisma que esse adapter usa não estão disponíveis em todo banco. Se você usar um desses recursos num provider sem suporte, o próprio Prisma lança um erro de validação (ou, em versões futuras, o adapter pode validar isso antecipadamente — ver abaixo).
+
+| Recurso | Providers com suporte | Sem suporte |
+| --- | --- | --- |
+| `mode: "insensitive"` (usado pelos métodos dinâmicos `findByXIgnoreCase`) | PostgreSQL, MongoDB | MySQL, SQLite, SQL Server, CockroachDB — MySQL e SQL Server já são case-insensitive por padrão, então não precisam de `mode`; SQLite só é case-insensitive pra caracteres ASCII |
+| `createManyReturning` / `updateManyReturning` (baseados no `createManyAndReturn`/`updateManyAndReturn` do Prisma) | PostgreSQL, CockroachDB, SQLite | MySQL, SQL Server, MongoDB |
+| `skipDuplicates` no `createManyIgnoreConflicts` / `createManyReturningIgnoreConflicts` | PostgreSQL, MySQL, CockroachDB | MongoDB, SQL Server, SQLite |
+
+> Essas limitações vêm do próprio Prisma, não do adapter — veja a [doc de case sensitivity](https://www.prisma.io/docs/orm/v7/reference/prisma-client-reference#mode) e a [referência de CRUD](https://www.prisma.io/docs/orm/v7/prisma-client/queries/crud) do Prisma pra mais detalhes.
 
 ## Transactions
 

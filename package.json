@@ -1,6 +1,6 @@
 {
   "name": "@vsrepo/prisma7-adapter",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "VSRepository adapter implementation backed by Prisma 7, translating every VSRepository operation into Prisma Client calls.",
   "homepage": "https://github.com/jaobrabo123/VSRepoPrisma7Adapter#readme",
   "repository": {

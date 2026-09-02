@@ -34,6 +34,7 @@
   - [`relations` in method options (read)](#relations-in-method-options-read)
 - [`merge`](#merge)
 - [`createMany`/`createManyReturning`/`updateMany`/`updateManyReturning` don't support nested writes](#createmanycreatemanyreturningupdatemanyupdatemanyreturning-dont-support-nested-writes)
+- [Provider-specific limitations](#provider-specific-limitations)
 - [Transactions](#transactions)
 - [Logging](#logging)
 - [Requirements](#requirements)
@@ -201,6 +202,18 @@ For to-many relations (`otm`/`mtm`), items in the stored record and items in `ob
 `createMany`, `createManyReturning`, `updateMany` and `updateManyReturning` only accept scalar fields in their `data`. If your payload includes a field configured in `relations` (regardless of its value), the adapter throws a `VSRepoPrisma7AdapterError` naming the offending field. For a full nested write, use `create`/`update`/`save` one record at a time, or wrap several `save` calls in a `saveMany`/`transaction`.
 
 > Note on return order: `createManyReturning` don't guarantee the returned records follow the order of the input payload (`objs`). Their result comes from a second `findMany` (re-querying the inserted/updated rows by primary key), so the order is only guaranteed when you pass `order` in the options.
+
+## Provider-specific limitations
+
+Some Prisma features this adapter relies on aren't available on every database provider. If you use one of these features on an unsupported provider, Prisma itself will throw a validation error (or, in future versions, the adapter may validate this upfront — see below).
+
+| Feature | Supported providers | Not supported |
+| --- | --- | --- |
+| `mode: "insensitive"` (used by `findByXIgnoreCase` dynamic methods) | PostgreSQL, MongoDB | MySQL, SQLite, SQL Server, CockroachDB — MySQL and SQL Server are case-insensitive by default, so no `mode` is needed there; SQLite is only case-insensitive for ASCII characters |
+| `createManyReturning` / `updateManyReturning` (built on Prisma's `createManyAndReturn`/`updateManyAndReturn`) | PostgreSQL, CockroachDB, SQLite | MySQL, SQL Server, MongoDB |
+| `skipDuplicates` on `createManyIgnoreConflicts` / `createManyReturningIgnoreConflicts` | PostgreSQL, MySQL, CockroachDB | MongoDB, SQL Server, SQLite |
+
+> These limitations come from Prisma itself, not from this adapter — see [Prisma's case sensitivity docs](https://www.prisma.io/docs/orm/v7/reference/prisma-client-reference#mode) and [CRUD reference](https://www.prisma.io/docs/orm/v7/prisma-client/queries/crud) for details.
 
 ## Transactions
 

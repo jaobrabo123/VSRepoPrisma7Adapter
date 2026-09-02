@@ -20,4 +20,8 @@ export interface VSRepoPrisma7AdapterConfig<T = any> {
     relations?: AdapterRelations<T>;
     /** Minimum log level for the adapter's internal `VSLogger`. @default VSLogLevel.WARN */
     logLevel?: VSLogLevel;
+    /**
+     * Duration (in ms) above which a finished operation is logged, flagging potentially slow queries. Defaults to 300ms.
+     */
+    logSlowThresholdMs?: number;
 }
