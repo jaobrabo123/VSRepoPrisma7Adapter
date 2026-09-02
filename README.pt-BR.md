@@ -13,9 +13,9 @@
 
 🇺🇸 [Read in English](./README.md)
 
-> ⚠️ **Em desenvolvimento.** Este adapter é feito para a branch `v2` do [VSRepository](https://github.com/jaobrabo123/VSRepository/tree/v2), que por sua vez ainda é uma reescrita em andamento. As APIs descritas aqui ainda podem mudar antes de um release estável.
+> ✅ **Lançado.** Este adapter já foi publicado no npm como `@vsrepo/prisma7-adapter`, feito para o [VSRepository](https://github.com/jaobrabo123/VSRepository). Por enquanto é o único adapter oficial publicado para a v2 — adapters para outros ORMs estão planejados, mas ainda não foram publicados (veja [Status dos adapters](https://github.com/jaobrabo123/VSRepository/blob/main/README.pt-BR.md#status-dos-adapters) no README do VSRepository).
 
-Implementação de `VSRepoAdapter` para o [VSRepository v2](https://github.com/jaobrabo123/VSRepository/tree/v2) usando [Prisma 7](https://www.prisma.io/). Traduz toda operação do `VSRepository` em chamadas do Prisma Client, resolvendo `VSRepoWhere`, `Ordering`, `select`/`relations` através de parsers dedicados e — quando uma config de `relations` é fornecida — resolvendo campos de relação em `create`/`update`/`upsert`/`merge` da mesma forma que a v1 do VSRepository fazia.
+Implementação de `VSRepoAdapter` para o [VSRepository v2](https://github.com/jaobrabo123/VSRepository) usando [Prisma 7](https://www.prisma.io/). Traduz toda operação do `VSRepository` em chamadas do Prisma Client, resolvendo `VSRepoWhere`, `Ordering`, `select`/`relations` através de parsers dedicados e — quando uma config de `relations` é fornecida — resolvendo campos de relação em `create`/`update`/`upsert`/`merge` da mesma forma que a v1 do VSRepository fazia.
 
 ---
 
@@ -43,10 +43,10 @@ Implementação de `VSRepoAdapter` para o [VSRepository v2](https://github.com/j
 ## Instalação
 
 ```bash
-npm install vsrepo @prisma/client
+npm install vsrepo @prisma/client @vsrepo/prisma7-adapter
 ```
 
-O adapter ainda não é publicado como um pacote separado — `src/prisma7.adapter.ts` importa o resto de `src/` (`parsers/`, `resolvers/`, `validators/`, `types/`), então clone/copie a pasta `src/` inteira (mais as dependências npm, `deepmerge` e `valibot`) para o seu projeto até que ele seja publicado como `@vsrepo/prisma7-adapter`.
+Tanto o `vsrepo` quanto o `@vsrepo/prisma7-adapter` já foram publicados no npm e estão prontos para uso.
 
 ## Uso básico
 

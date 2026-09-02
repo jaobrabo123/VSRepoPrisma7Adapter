@@ -13,9 +13,9 @@
 
 🇧🇷 [Ler em português](./README.pt-BR.md)
 
-> ⚠️ **Work in progress.** This adapter targets the `v2` branch of [VSRepository](https://github.com/jaobrabo123/VSRepository/tree/v2), which is itself still an ongoing rewrite. APIs described here may still change before a stable release.
+> ✅ **Released.** This adapter is published to npm as `@vsrepo/prisma7-adapter`, targeting [VSRepository](https://github.com/jaobrabo123/VSRepository). It's currently the only officially published adapter for v2 — adapters for other ORMs are planned but not published yet (see [Adapter status](https://github.com/jaobrabo123/VSRepository#adapter-status) in the VSRepository README).
 
-`VSRepoAdapter` implementation for [VSRepository v2](https://github.com/jaobrabo123/VSRepository/tree/v2) backed by [Prisma 7](https://www.prisma.io/). It translates every `VSRepository` operation into Prisma Client calls, resolving `VSRepoWhere`, `Ordering`, `select`/`relations` through dedicated parsers, and — when a `relations` config is provided — resolving relation fields on `create`/`update`/`upsert`/`merge` the same way the v1 of VSRepository used to.
+`VSRepoAdapter` implementation for [VSRepository v2](https://github.com/jaobrabo123/VSRepository) backed by [Prisma 7](https://www.prisma.io/). It translates every `VSRepository` operation into Prisma Client calls, resolving `VSRepoWhere`, `Ordering`, `select`/`relations` through dedicated parsers, and — when a `relations` config is provided — resolving relation fields on `create`/`update`/`upsert`/`merge` the same way the v1 of VSRepository used to.
 
 ---
 
@@ -43,10 +43,10 @@
 ## Installation
 
 ```bash
-npm install vsrepo @prisma/client
+npm install vsrepo @prisma/client @vsrepo/prisma7-adapter
 ```
 
-The adapter itself isn't published as a separate package yet — `src/prisma7.adapter.ts` pulls in the rest of `src/` (`parsers/`, `resolvers/`, `validators/`, `types/`), so clone/vendor the whole `src/` folder (plus its npm dependencies, `deepmerge` and `valibot`) into your project until it ships as `@vsrepo/prisma7-adapter`.
+Both `vsrepo` and `@vsrepo/prisma7-adapter` are published to npm and ready to use.
 
 ## Basic usage
 
