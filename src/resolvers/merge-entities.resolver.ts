@@ -21,7 +21,11 @@ import { PlainObject } from "../types/plain-object.type";
 import { Relation } from "../types/relation.type";
 import { isPlainObject } from "../validators/is-plain-object.validator";
 
-function mergeToManyRelation(target: PlainObject[], source: PlainObject[], relationPk: string): PlainObject[] {
+function mergeToManyRelation(
+    target: PlainObject[],
+    source: PlainObject[],
+    relationPk: string,
+): PlainObject[] {
     const targetMap = new Map<any, PlainObject>();
     const targetWithoutPk: PlainObject[] = [];
 
@@ -54,7 +58,12 @@ export function mergeEntities<T extends PlainObject, U extends PlainObject>(
     relations?: AdapterRelations<T>,
 ): U & T {
     if (!relations) {
-        return merge(result, obj, {
+        const definedObj: Partial<U> = {};
+        for (const key of Object.keys(obj) as (keyof U)[]) {
+            if (obj[key] !== undefined) definedObj[key] = obj[key];
+        }
+
+        return merge(result, definedObj, {
             arrayMerge: (target, source) => target.concat(source),
         }) as unknown as U & T;
     }
