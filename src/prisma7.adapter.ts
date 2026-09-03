@@ -316,10 +316,18 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
 
     /**
      * Deletes every record matching `where`, returning the deleted records.
-     * Prisma has no `deleteManyAndReturn`, so this fetches then deletes inside
-     * a transaction — reusing `options.db` when it's already a transaction
-     * client (see `runTransactional`), so it stays atomic even when it's not
-     * the one starting the transaction.
+     *
+     * Prisma has no `deleteManyAndReturn`, so this does a `findMany` on
+     * `where` first and then re-applies the same `where` to a `deleteMany`,
+     * both inside a transaction (`runTransactional`).
+     *
+     * Because the delete is driven by the same `where` (not by the fetched
+     * records), a concurrent change between the two operations can make them
+     * diverge — e.g. a row inserted after the `findMany` matching the `where`
+     * would still be deleted, while a row changed to stop matching wouldn't.
+     * If you need to guarantee no concurrency issues, run this method inside a
+     * `repository.transaction()` with a higher isolation level, e.g.
+     * `TransactionIsolationLevel.SERIALIZABLE`.
      */
     public async deleteManyReturning(
         where: VSRepoWhere<T>,
