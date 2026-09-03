@@ -236,6 +236,36 @@ await userRepository.transaction(async tx => {
 });
 ```
 
+### Concurrency in `deleteManyReturning`
+
+`deleteManyReturning` runs a `findMany` on the given `where` (to capture the records it will return) and then **re-applies the same `where`** to a `deleteMany`. Prisma has no native `deleteManyAndReturn`, which is why the delete is driven by the `where` instead of by the records fetched in the `findMany`.
+
+Because of this two-step shape, a concurrent change between the `findMany` and the `deleteMany` can make them diverge:
+
+- a row **inserted after** the `findMany` that matches the `where` will still be deleted, even though it wasn't returned;
+- a row that **stops matching** the `where` before the `deleteMany` runs won't be deleted, even though it was returned.
+
+In other words, the returned records and the rows actually deleted are not guaranteed to be identical under concurrency.
+
+If you need to guarantee there are no concurrency issues, run this method inside a `repository.transaction()` at a higher isolation level — e.g. `SERIALIZABLE`:
+
+```typescript
+import { VSRepository, TransactionIsolationLevel } from "vsrepo";
+
+await userRepository.transaction(async tx => {
+    // Atomic: no concurrent insert/update can slip between the findMany
+    // and the deleteMany, since SERIALIZABLE isolates this transaction.
+    // `deleteManyReturning` is reached through the dynamic method you mapped
+    // to the adapter (e.g. a `@DynamicMethod()` exposing `deleteManyReturning`),
+    // always passing `{ db: tx }` so it runs inside this transaction.
+    const deleted = await userRepository.deleteManyReturningByIdIn([...], { db: tx });
+}, {
+    isolationLevel: TransactionIsolationLevel.SERIALIZABLE,
+});
+```
+
+> The isolation level applies only when the repository call actually runs **inside** that transaction (i.e. with `{ db: tx }`). When `deleteManyReturning` starts its own internal transaction (no `options.db` passed), it falls back to the default isolation level.
+
 ## Logging
 
 The adapter uses `VSLogger` (from `vsrepo`) internally: every method logs a `DEBUG` line with the resolved Prisma arg, and start/end performance logs (surfacing a `WARN` for slow operations). Set `logLevel` in the constructor config to control verbosity; it defaults to `VSLogLevel.WARN`.
