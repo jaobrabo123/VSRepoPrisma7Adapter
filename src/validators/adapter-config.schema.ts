@@ -7,4 +7,5 @@ export const adapterConfigSchema = v.object({
     pkName: v.pipe(v.string(), v.minLength(1)),
     relations: v.optional(v.record(v.string(), relationSchema)),
     logLevel: v.optional(v.enum(VSLogLevel)),
+    logSlowThresholdMs: v.optional(v.pipe(v.number(), v.gtValue(0))),
 });
