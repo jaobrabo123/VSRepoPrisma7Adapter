@@ -6,6 +6,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.2] - 2026-09-02
+
+### Docs
+- Documented how `deleteManyReturning` works — it fetches the records matching `where` via a `findMany` and then **re-applies the same `where`** to a `deleteMany` (Prisma has no native `deleteManyAndReturn`). Because the delete is driven by the `where` rather than the fetched records, a concurrent change between the two operations can make the returned records and the actually-deleted rows diverge (e.g. a row inserted after the `findMany` still gets deleted even though it wasn't returned; a row that stops matching before the `deleteMany` isn't deleted even though it was returned). Added guidance in the `README.md`/`README.pt-BR.md` (Transactions section) on running the method inside a `repository.transaction()` at a higher isolation level (e.g. `TransactionIsolationLevel.SERIALIZABLE`) to guarantee no concurrency issues, and updated the JSDoc of `deleteManyReturning` accordingly
+
+---
+
+## [1.0.2] - 2026-09-02 (Português)
+
+### Documentação
+- Documentado o funcionamento do `deleteManyReturning` — ele busca os registros que batem com o `where` via um `findMany` e depois **re-aplica o mesmo `where`** num `deleteMany` (o Prisma não tem um `deleteManyAndReturn` nativo). Como o delete é guiado pelo `where` — e não pelos registros buscados — uma alteração concorrente entre as duas operações pode fazer os registros retornados e as linhas realmente deletadas divergirem (ex.: uma linha inserida depois do `findMany` ainda é deletada mesmo sem ter sido retornada; uma linha que deixa de bater antes do `deleteMany` não é deletada mesmo tendo sido retornada). Adicionada orientação no `README.md`/`README.pt-BR.md` (seção Transactions) para rodar o método dentro de um `repository.transaction()` num nível de isolamento mais alto (ex.: `TransactionIsolationLevel.SERIALIZABLE`) para garantir que não haverá problemas de concorrência, e atualizado o JSDoc do `deleteManyReturning` de acordo
+
+---
+
 ## [1.0.1] - 2026-09-02
 
 ### Fixed
