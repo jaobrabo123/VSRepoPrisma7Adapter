@@ -61,7 +61,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
         this.logger = new VSLogger(
             validated.logLevel ?? VSLogLevel.WARN,
             this.constructor.name + "Logger",
-            validated.logSlowThresholdMs,
+            validated.logSlowThresholdMs ?? 300,
         );
 
         this.logger.logInfo(
