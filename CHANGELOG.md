@@ -6,6 +6,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.0.3] - 2026-09-03
+
+### Fixed
+- `logSlowThresholdMs` option was missing from the runtime validation schema (`adapterConfigSchema`) — although the option was documented and consumed in the constructor since v1.0.1, it was not declared in the valibot schema, which could cause validation issues; the field is now properly validated as an optional positive number, and a default value of `300` is applied before passing it to `VSLogger`
+
+---
+
+## [1.0.3] - 2026-09-03 (Português)
+
+### Corrigido
+- A opção `logSlowThresholdMs` estava faltando no schema de validação em runtime (`adapterConfigSchema`) — embora a opção fosse documentada e consumida no construtor desde a v1.0.1, ela não estava declarada no schema valibot, o que poderia causar problemas de validação; o campo agora é validado corretamente como um número positivo opcional, e um valor padrão de `300` é aplicado antes de passá-lo ao `VSLogger`
+
+---
+
 ## [1.0.2] - 2026-09-02
 
 ### Docs
