@@ -6,6 +6,34 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.1.0] - 2026-09-04
+
+### Added
+- **Atomic and aggregation methods** — implements the 8 new abstract methods added to the `VSRepoAdapter` contract by `vsrepo` 2.1.0: `incrementOne`, `decrementOne`, `multiplyOne`, `divideOne`, `sum`, `average`, `min` and `max`
+  - `incrementOne`/`decrementOne`/`multiplyOne`/`divideOne` translate directly into Prisma's native single-field atomic write (`data: { [field]: { increment: value } }`, etc.), evaluated server-side against the row's *current* value, not as a client-side read-modify-write. Prisma's `update()` already returns the row reflecting the state *after* the write, so no follow-up read is issued
+  - `sum`/`average`/`min`/`max` translate into Prisma's `aggregate()` (`_sum`/`_avg`/`_min`/`_max`); the raw result (`number`, `bigint`, `Decimal`, or `null`) is normalized to `number | null`, returning `null` (not `0`) when no record matches, mirroring SQL's `SUM()`/`AVG()`/`MIN()`/`MAX()`
+  - `Decimal` fields are fully supported: atomic `value`s are passed through to Prisma as-is, and aggregate results are always normalized to `number` via `.toNumber()`, never returned as a `Decimal` instance
+  - New "Atomic and aggregation methods" section in `README.md`/`README.pt-BR.md`, plus JSDoc on every new method
+
+### Changed
+- **BREAKING (peer dependency):** the `vsrepo` peer dependency was bumped from `^2.0.0` to `^2.1.0` — the adapter now imports `NumericKeys`/`DecimalLike` types that only exist starting in `vsrepo` 2.1.0, and implements the new abstract methods required by that version's `VSRepoAdapter` contract
+
+---
+
+## [1.1.0] - 2026-09-04 (Português)
+
+### Adicionado
+- **Métodos atômicos e de agregação** — implementa os 8 novos métodos abstratos adicionados ao contrato do `VSRepoAdapter` pela `vsrepo` 2.1.0: `incrementOne`, `decrementOne`, `multiplyOne`, `divideOne`, `sum`, `average`, `min` e `max`
+  - `incrementOne`/`decrementOne`/`multiplyOne`/`divideOne` traduzem direto pra escrita atômica nativa de campo único do Prisma (`data: { [field]: { increment: value } }`, etc.), avaliada server-side contra o valor *atual* do registro, e não como um read-modify-write no cliente. O `update()` do Prisma já retorna a linha refletindo o estado *após* a escrita, então nenhuma leitura extra é feita
+  - `sum`/`average`/`min`/`max` traduzem pro `aggregate()` do Prisma (`_sum`/`_avg`/`_min`/`_max`); o resultado bruto (`number`, `bigint`, `Decimal`, ou `null`) é normalizado pra `number | null`, retornando `null` (não `0`) quando nenhum registro casa, espelhando o `SUM()`/`AVG()`/`MIN()`/`MAX()` do SQL
+  - Campos `Decimal` são totalmente suportados: os `value`s atômicos são repassados pro Prisma como estão, e os resultados de agregação são sempre normalizados pra `number` via `.toNumber()`, nunca retornados como uma instância de `Decimal`
+  - Nova seção "Métodos atômicos e de agregação" no `README.md`/`README.pt-BR.md`, além de JSDoc em cada novo método
+
+### Alterado
+- **BREAKING (peer dependency):** a peer dependency `vsrepo` foi elevada de `^2.0.0` pra `^2.1.0` — o adapter agora importa os tipos `NumericKeys`/`DecimalLike`, que só existem a partir da `vsrepo` 2.1.0, e implementa os novos métodos abstratos exigidos pelo contrato `VSRepoAdapter` dessa versão
+
+---
+
 ## [1.0.3] - 2026-09-03
 
 ### Fixed
