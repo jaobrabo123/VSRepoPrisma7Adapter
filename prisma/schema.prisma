@@ -9,11 +9,13 @@ datasource db {
 }
 
 model User {
-  id      Int      @id @default(autoincrement())
-  email   String   @unique
-  name    String?
-  posts   Post[]
-  address Address?
+  id          Int      @id @default(autoincrement())
+  email       String   @unique
+  name        String?
+  balance     Int      @default(0)
+  bonusPoints Int?
+  posts       Post[]
+  address     Address?
 }
 
 model Address {
@@ -26,11 +28,12 @@ model Address {
 }
 
 model Post {
-  id        Int     @id @default(autoincrement())
+  id        Int      @id @default(autoincrement())
   title     String
   content   String?
-  published Boolean @default(false)
-  author    User    @relation(fields: [authorId], references: [id])
+  published Boolean  @default(false)
+  price     Decimal? @db.Decimal(10, 2)
+  author    User     @relation(fields: [authorId], references: [id])
   authorId  Int
   tags      Tag[]
 }
