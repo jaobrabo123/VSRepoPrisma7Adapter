@@ -99,6 +99,19 @@ async function example() {
     const removed = await userRepository.deleteManyReturningByIdIn(vsrepoUsers.map(u => u.id));
     console.log(removed);
 
+    const user = await userRepository.save({
+        name: "Gus",
+        email: "gus@vsmail.com",
+        balance: 200,
+    });
+    console.log(
+        await userRepository.increment(user.id, "balance", 100, { relations: { posts: true } }),
+    );
+
+    console.log(await userRepository.sum("balance"));
+
+    await userRepository.remove(user.id);
+
     await prisma.$disconnect();
 }
 
