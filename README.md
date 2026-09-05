@@ -33,6 +33,7 @@
     - [How each write method resolves relations](#how-each-write-method-resolves-relations)
   - [`relations` in method options (read)](#relations-in-method-options-read)
 - [`merge`](#merge)
+- [Atomic and aggregation methods](#atomic-and-aggregation-methods)
 - [`createMany`/`createManyReturning`/`updateMany`/`updateManyReturning` don't support nested writes](#createmanycreatemanyreturningupdatemanyupdatemanyreturning-dont-support-nested-writes)
 - [Provider-specific limitations](#provider-specific-limitations)
 - [Transactions](#transactions)
@@ -197,6 +198,31 @@ const prismaInclude = prismaSelect
 
 For to-many relations (`otm`/`mtm`), items in the stored record and items in `obj` are matched by the configured `pk`: a match merges the two items, a new `pk` (or no `pk`) is appended. Nothing is ever removed by `merge`.
 
+## Atomic and aggregation methods
+
+> Requires `vsrepo` **2.1.0+** — these methods were added to the `VSRepoAdapter` contract in that release (see the [VSRepository CHANGELOG](https://github.com/jaobrabo123/VSRepository/blob/main/CHANGELOG.md#210---2026-09-04)).
+
+The adapter implements the 8 abstract methods `VSRepository`'s `increment`/`decrement`/`multiply`/`divide`/`sum`/`average`/`min`/`max` delegate to: `incrementOne`, `decrementOne`, `multiplyOne`, `divideOne`, `sum`, `average`, `min`, `max`.
+
+- `incrementOne`/`decrementOne`/`multiplyOne`/`divideOne` translate directly into Prisma's native single-field atomic write — `data: { [field]: { increment: value } }` (and `decrement`/`multiply`/`divide`) — so the operation is evaluated **server-side** against the row's *current* value (`UPDATE ... SET field = field + value`), not as a fetch-then-save round trip on the client. Prisma's `update()` already returns the row reflecting the state *after* the write, so the adapter never issues a follow-up read.
+- `sum`/`average`/`min`/`max` translate into Prisma's `aggregate()` with `_sum`/`_avg`/`_min`/`_max: { [field]: true }`. The raw result (`number`, `bigint`, a `Decimal` instance, or `null`) is normalized to `number | null` — `null` is returned as-is (mirroring SQL's `SUM()`/`AVG()`/`MIN()`/`MAX()`, which return `NULL`, not `0`, over an empty set), and a `Decimal`/`DecimalLike` value is converted via its `.toNumber()`.
+
+```typescript
+// Atomic — evaluated server-side, no read-modify-write:
+await productRepository.increment(productId, "stock", 10);
+await accountRepository.decrement(accountId, "balance", 50);
+await productRepository.multiply(productId, "price", 1.1); // e.g. a 10% price bump
+await productRepository.divide(productId, "price", 2);
+
+// Aggregation — across every record matching an optional `where` (all if omitted):
+const total = await productRepository.sum("price"); // number | null
+const avgPrice = await productRepository.average("price", { active: true });
+const cheapest = await productRepository.min("price");
+const mostExpensive = await productRepository.max("price");
+```
+
+**Decimal fields** (`Prisma.Decimal`) are fully supported as the `field` for all 8 methods — `value` for the atomic methods is passed straight through to Prisma (which accepts a `number`, `string`, or `Decimal`/`DecimalJsLike`), and the aggregate methods always normalize the result to a `number`, never a `Decimal` instance.
+
 ## `createMany`/`createManyReturning`/`updateMany`/`updateManyReturning` don't support nested writes
 
 `createMany`, `createManyReturning`, `updateMany` and `updateManyReturning` only accept scalar fields in their `data`. If your payload includes a field configured in `relations` (regardless of its value), the adapter throws a `VSRepoPrisma7AdapterError` naming the offending field. For a full nested write, use `create`/`update`/`save` one record at a time, or wrap several `save` calls in a `saveMany`/`transaction`.
@@ -272,5 +298,5 @@ The adapter uses `VSLogger` (from `vsrepo`) internally: every method logs a `DEB
 
 ## Requirements
 
-- `vsrepo` v2
+- `vsrepo` ^2.1.0
 - `@prisma/client` ^7.10.0

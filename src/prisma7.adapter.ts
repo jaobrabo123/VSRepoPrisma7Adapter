@@ -3,7 +3,9 @@ import {
     AdapterMethodOptions,
     AdapterQueryOptions,
     CountResult,
+    DecimalLike,
     DeepPartial,
+    NumericKeys,
     VSLogger,
     VSLogLevel,
     VSRepoAdapter,
@@ -149,6 +151,92 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
         }
 
         return (db ?? this.prisma).$transaction(fn);
+    }
+
+    /**
+     * Runs a single-field atomic update (`increment`/`decrement`/`multiply`/
+     * `divide`) via Prisma's native `{ field: { <op>: value } }` write —
+     * evaluated server-side against the row's current value, never as a
+     * client-side read-modify-write. `value` is passed through as-is:
+     * Prisma accepts a `number`, `bigint`, or any `Decimal`/`DecimalJsLike`
+     * value (which covers a {@link DecimalLike} like `Prisma.Decimal`)
+     * depending on the target column's type.
+     *
+     * Prisma's `update()` already returns the row reflecting the state
+     * *after* the write, so no follow-up read is needed here.
+     */
+    private async atomicUpdate<K extends NumericKeys<T>>(
+        operation: "increment" | "decrement" | "multiply" | "divide",
+        field: K,
+        value: NonNullable<T[K]>,
+        where: VSRepoWhere<T>,
+        options?: AdapterMethodOptions<T>,
+    ): Promise<T> {
+        const start = this.logger.startPerformLog(`run ${operation}One`);
+
+        try {
+            const arg = {
+                ...this.resolveReadArg(options),
+                where: parsePrismaWhere<T>(where),
+                data: { [field]: { [operation]: value } },
+            };
+            this.logger.logDebug(`Resolved Prisma arg for '${operation}One'`, arg);
+
+            return await this.getPrismaRepository(options?.db).update(arg);
+        } catch (error) {
+            throw mapPrismaError(error, `${operation}One`);
+        } finally {
+            this.logger.endPerformLog(start);
+        }
+    }
+
+    /**
+     * Converts a raw value returned by Prisma's `aggregate()` (`number`,
+     * `bigint`, a `Decimal` instance, or `null` when no record matches)
+     * into the `number | null` shape required by the `VSRepoAdapter`
+     * aggregate contract.
+     */
+    private toNullableNumber(value: unknown): number | null {
+        if (value === null || value === undefined) return null;
+        if (typeof value === "bigint") return Number(value);
+        if (typeof (value as Partial<DecimalLike>)?.toNumber === "function") {
+            return (value as DecimalLike).toNumber();
+        }
+        return Number(value);
+    }
+
+    /**
+     * Runs a single-field aggregation (`sum`/`avg`/`min`/`max`) via Prisma's
+     * `aggregate()`, across every record matching `where` (all records if
+     * empty). Returns `null` when no record matches — mirroring SQL's
+     * `SUM()`/`AVG()`/`MIN()`/`MAX()`, which return `NULL` (not `0`) over an
+     * empty set — instead of Prisma's own `_sum`/`_avg`/`_min`/`_max: null`
+     * shape.
+     */
+    private async aggregate(
+        operation: "sum" | "avg" | "min" | "max",
+        field: NumericKeys<T>,
+        where: VSRepoWhere<T>,
+        options?: AdapterMethodOptions<T>,
+    ): Promise<number | null> {
+        const start = this.logger.startPerformLog(`run ${operation}`);
+        const aggKey = `_${operation}`;
+
+        try {
+            const arg = {
+                where: parsePrismaWhere<T>(where),
+                [aggKey]: { [field]: true },
+            };
+            this.logger.logDebug(`Resolved Prisma arg for '${operation}'`, arg);
+
+            const result = await this.getPrismaRepository(options?.db).aggregate(arg);
+
+            return this.toNullableNumber(result?.[aggKey]?.[field as string]);
+        } catch (error) {
+            throw mapPrismaError(error, operation);
+        } finally {
+            this.logger.endPerformLog(start);
+        }
     }
 
     /** Returns the underlying ORM client instance used outside of transactions. */
@@ -650,5 +738,93 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
         } finally {
             this.logger.endPerformLog(start);
         }
+    }
+
+    /**
+     * Atomically adds `value` to `field` on the record matching `where`,
+     * via Prisma's native `{ field: { increment: value } }` write.
+     */
+    public async incrementOne<K extends NumericKeys<T>>(
+        field: K,
+        value: NonNullable<T[K]>,
+        where: VSRepoWhere<T>,
+        options?: AdapterMethodOptions<T>,
+    ): Promise<T> {
+        return this.atomicUpdate("increment", field, value, where, options);
+    }
+
+    /** Same as {@link VSRepoPrisma7Adapter.incrementOne}, subtracting `value` instead of adding it. */
+    public async decrementOne<K extends NumericKeys<T>>(
+        field: K,
+        value: NonNullable<T[K]>,
+        where: VSRepoWhere<T>,
+        options?: AdapterMethodOptions<T>,
+    ): Promise<T> {
+        return this.atomicUpdate("decrement", field, value, where, options);
+    }
+
+    /** Same as {@link VSRepoPrisma7Adapter.incrementOne}, multiplying the field's current value by `value`. */
+    public async multiplyOne<K extends NumericKeys<T>>(
+        field: K,
+        value: NonNullable<T[K]>,
+        where: VSRepoWhere<T>,
+        options?: AdapterMethodOptions<T>,
+    ): Promise<T> {
+        return this.atomicUpdate("multiply", field, value, where, options);
+    }
+
+    /**
+     * Same as {@link VSRepoPrisma7Adapter.incrementOne}, dividing the
+     * field's current value by `value`. Division-by-zero is not handled by
+     * the adapter — it's whatever Postgres does natively (raises a
+     * `division_by_zero` error for integer columns; `Infinity`/`NaN` are not
+     * representable in a numeric/decimal column, so those also error).
+     */
+    public async divideOne<K extends NumericKeys<T>>(
+        field: K,
+        value: NonNullable<T[K]>,
+        where: VSRepoWhere<T>,
+        options?: AdapterMethodOptions<T>,
+    ): Promise<T> {
+        return this.atomicUpdate("divide", field, value, where, options);
+    }
+
+    /**
+     * Returns the sum of `field` across every record matching `where` (all
+     * records if `where` is empty), or `null` if no record matches.
+     */
+    public async sum(
+        field: NumericKeys<T>,
+        where: VSRepoWhere<T>,
+        options?: AdapterMethodOptions<T>,
+    ): Promise<number | null> {
+        return this.aggregate("sum", field, where, options);
+    }
+
+    /** Same as {@link VSRepoPrisma7Adapter.sum}, but the arithmetic mean instead of the total. */
+    public async average(
+        field: NumericKeys<T>,
+        where: VSRepoWhere<T>,
+        options?: AdapterMethodOptions<T>,
+    ): Promise<number | null> {
+        return this.aggregate("avg", field, where, options);
+    }
+
+    /** Same as {@link VSRepoPrisma7Adapter.sum}, but the minimum value instead of the total. */
+    public async min(
+        field: NumericKeys<T>,
+        where: VSRepoWhere<T>,
+        options?: AdapterMethodOptions<T>,
+    ): Promise<number | null> {
+        return this.aggregate("min", field, where, options);
+    }
+
+    /** Same as {@link VSRepoPrisma7Adapter.sum}, but the maximum value instead of the total. */
+    public async max(
+        field: NumericKeys<T>,
+        where: VSRepoWhere<T>,
+        options?: AdapterMethodOptions<T>,
+    ): Promise<number | null> {
+        return this.aggregate("max", field, where, options);
     }
 }

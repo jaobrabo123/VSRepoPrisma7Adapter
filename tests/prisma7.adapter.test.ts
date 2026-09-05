@@ -568,6 +568,189 @@ describe("VSRepoPrisma7Adapter (integração com Postgres real)", () => {
         });
     });
 
+    describe("incrementOne / decrementOne / multiplyOne / divideOne", () => {
+        it("incrementOne soma 'value' ao campo, avaliado server-side, e retorna o registro já atualizado", async () => {
+            const user = await createUser({ email: "ana@example.com", balance: 100 } as any);
+
+            const result = await userAdapter.incrementOne("balance" as any, 50 as any, {
+                id: user.id,
+            });
+
+            expect((result as any).balance).toBe(150);
+            const stored = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+            expect((stored as any).balance).toBe(150);
+        });
+
+        it("decrementOne subtrai 'value' do campo", async () => {
+            const user = await createUser({ email: "ana@example.com", balance: 100 } as any);
+
+            const result = await userAdapter.decrementOne("balance" as any, 30 as any, {
+                id: user.id,
+            });
+
+            expect((result as any).balance).toBe(70);
+        });
+
+        it("multiplyOne multiplica o valor atual do campo por 'value'", async () => {
+            const user = await createUser({ email: "ana@example.com", balance: 100 } as any);
+
+            const result = await userAdapter.multiplyOne("balance" as any, 3 as any, {
+                id: user.id,
+            });
+
+            expect((result as any).balance).toBe(300);
+        });
+
+        it("divideOne divide o valor atual do campo por 'value'", async () => {
+            const user = await createUser({ email: "ana@example.com", balance: 100 } as any);
+
+            const result = await userAdapter.divideOne("balance" as any, 4 as any, {
+                id: user.id,
+            });
+
+            expect((result as any).balance).toBe(25);
+        });
+
+        it("divideOne por zero rejeita com um 'VSRepoAdapterError' (comportamento nativo do Postgres pra colunas inteiras)", async () => {
+            const user = await createUser({ email: "ana@example.com", balance: 100 } as any);
+
+            await expect(
+                userAdapter.divideOne("balance" as any, 0 as any, { id: user.id }),
+            ).rejects.toThrow(VSRepoAdapterError);
+        });
+
+        it("é avaliado server-side contra o valor atual (não um read-modify-write no cliente): chamadas concorrentes acumulam", async () => {
+            const user = await createUser({ email: "ana@example.com", balance: 0 } as any);
+
+            await Promise.all([
+                userAdapter.incrementOne("balance" as any, 10 as any, { id: user.id }),
+                userAdapter.incrementOne("balance" as any, 10 as any, { id: user.id }),
+                userAdapter.incrementOne("balance" as any, 10 as any, { id: user.id }),
+            ]);
+
+            const stored = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+            expect((stored as any).balance).toBe(30);
+        });
+
+        it("funciona num campo 'Decimal' (ex: 'price' de 'Post')", async () => {
+            const author = await createUser({ email: "ana@example.com" });
+            const post = await createPost(author.id, { price: "19.90" } as any);
+            const postAdapter = new VSRepoPrisma7Adapter<Post>(prisma, {
+                tableName: "post",
+                pkName: "id",
+                logLevel: VSLogLevel.ERROR,
+            });
+
+            const result = await postAdapter.incrementOne("price" as any, 5.1 as any, {
+                id: post.id,
+            });
+
+            expect(Number((result as any).price)).toBeCloseTo(25.0, 2);
+        });
+
+        it("propaga 'select' pro registro retornado", async () => {
+            const user = await createUser({
+                email: "ana@example.com",
+                balance: 100,
+                name: "Ana",
+            } as any);
+
+            const result = await userAdapter.incrementOne(
+                "balance" as any,
+                10 as any,
+                { id: user.id },
+                { select: { id: true, balance: true } as any },
+            );
+
+            expect(result).toEqual({ id: user.id, balance: 110 });
+        });
+    });
+
+    describe("sum / average / min / max", () => {
+        it("sum soma o campo entre todos os registros que casam com o 'where' (todos os registros se vazio)", async () => {
+            await createUser({ email: "a@example.com", balance: 100 } as any);
+            await createUser({ email: "b@example.com", balance: 200 } as any);
+            await createUser({ email: "c@example.com", balance: 300 } as any);
+
+            const result = await userAdapter.sum("balance" as any, {});
+
+            expect(result).toBe(600);
+        });
+
+        it("sum retorna 'null' (não '0') quando nenhum registro casa com o 'where'", async () => {
+            await createUser({ email: "a@example.com", balance: 100 } as any);
+
+            const result = await userAdapter.sum("balance" as any, {
+                email: "nao-existe@example.com",
+            });
+
+            expect(result).toBeNull();
+        });
+
+        it("sum respeita um 'where' explícito", async () => {
+            await createUser({ email: "a@example.com", balance: 100, name: "Ana" } as any);
+            await createUser({ email: "b@example.com", balance: 200, name: "Bia" } as any);
+
+            const result = await userAdapter.sum("balance" as any, { name: "Ana" });
+
+            expect(result).toBe(100);
+        });
+
+        it("average calcula a média aritmética", async () => {
+            await createUser({ email: "a@example.com", balance: 100 } as any);
+            await createUser({ email: "b@example.com", balance: 300 } as any);
+
+            const result = await userAdapter.average("balance" as any, {});
+
+            expect(result).toBe(200);
+        });
+
+        it("min retorna o menor valor", async () => {
+            await createUser({ email: "a@example.com", balance: 100 } as any);
+            await createUser({ email: "b@example.com", balance: 30 } as any);
+            await createUser({ email: "c@example.com", balance: 300 } as any);
+
+            const result = await userAdapter.min("balance" as any, {});
+
+            expect(result).toBe(30);
+        });
+
+        it("max retorna o maior valor", async () => {
+            await createUser({ email: "a@example.com", balance: 100 } as any);
+            await createUser({ email: "b@example.com", balance: 30 } as any);
+            await createUser({ email: "c@example.com", balance: 300 } as any);
+
+            const result = await userAdapter.max("balance" as any, {});
+
+            expect(result).toBe(300);
+        });
+
+        it("num campo 'Decimal' (ex: 'price' de 'Post'), retornam 'number' em vez de 'Decimal'", async () => {
+            const author = await createUser({ email: "ana@example.com" });
+            await createPost(author.id, { price: "10.50" } as any);
+            await createPost(author.id, { price: "20.25" } as any);
+            const postAdapter = new VSRepoPrisma7Adapter<Post>(prisma, {
+                tableName: "post",
+                pkName: "id",
+                logLevel: VSLogLevel.ERROR,
+            });
+
+            const result = await postAdapter.sum("price" as any, {});
+
+            expect(typeof result).toBe("number");
+            expect(result).toBeCloseTo(30.75, 2);
+        });
+
+        it("ignora registros cujo campo é 'null' (comportamento nativo do SQL 'SUM'/'AVG'/'MIN'/'MAX')", async () => {
+            await createUser({ email: "a@example.com", balance: 100, bonusPoints: null } as any);
+            await createUser({ email: "b@example.com", balance: 200, bonusPoints: 50 } as any);
+
+            const result = await userAdapter.sum("bonusPoints" as any, {});
+
+            expect(result).toBe(50);
+        });
+    });
+
     describe("transações e getDbClient", () => {
         it("getDbClient retorna o client raiz", () => {
             expect(userAdapter.getDbClient()).toBe(prisma);

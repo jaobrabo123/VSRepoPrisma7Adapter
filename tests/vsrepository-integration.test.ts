@@ -43,7 +43,7 @@ import {
     VSRepository,
 } from "vsrepo";
 import { VSRepoPrisma7Adapter, Prisma7OrmTypes } from "../src";
-import type { Prisma, PrismaClient, Tag } from "../generated/prisma/client";
+import { Prisma, PrismaClient, Tag } from "../generated/prisma/client";
 import { cleanDatabase, prisma } from "./helpers/db";
 import { createPost, createTag, createUser } from "./helpers/fixtures";
 import { Post, User } from "./helpers/entities";
@@ -422,6 +422,206 @@ describe("VSRepoPrisma7Adapter usado através de uma VSRepository real (integra�
                     AdapterErrorCode.UNIQUE_CONSTRAINT_VIOLATION,
                 );
             }
+        });
+    });
+
+    describe("métodos atômicos (increment/decrement/multiply/divide) através da VSRepository", () => {
+        it("increment soma 'value' ao campo, avaliado server-side, e retorna o registro já atualizado", async () => {
+            const user = await createUser({ email: "ana@example.com", balance: 100 });
+
+            const result = await userRepository.increment(user.id, "balance", 50);
+
+            expect(result.balance).toBe(150);
+            const stored = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+            expect(stored.balance).toBe(150);
+        });
+
+        it("decrement subtrai 'value' do campo", async () => {
+            const user = await createUser({ email: "ana@example.com", balance: 100 });
+
+            const result = await userRepository.decrement(user.id, "balance", 30);
+
+            expect(result.balance).toBe(70);
+            expect((await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).balance).toBe(
+                70,
+            );
+        });
+
+        it("multiply multiplica o valor atual do campo por 'value'", async () => {
+            const user = await createUser({ email: "ana@example.com", balance: 100 });
+
+            const result = await userRepository.multiply(user.id, "balance", 3);
+
+            expect(result.balance).toBe(300);
+            expect((await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).balance).toBe(
+                300,
+            );
+        });
+
+        it("divide divide o valor atual do campo por 'value'", async () => {
+            const user = await createUser({ email: "ana@example.com", balance: 100 });
+
+            const result = await userRepository.divide(user.id, "balance", 4);
+
+            expect(result.balance).toBe(25);
+            expect((await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).balance).toBe(
+                25,
+            );
+        });
+
+        it("divide por zero rejeita com um 'VSRepoAdapterError' (comportamento nativo do Postgres pra colunas inteiras)", async () => {
+            const user = await createUser({ email: "ana@example.com", balance: 100 });
+
+            await expect(userRepository.divide(user.id, "balance", 0)).rejects.toThrow(
+                VSRepoAdapterError,
+            );
+        });
+
+        it("é avaliado server-side contra o valor atual (não um read-modify-write no cliente): chamadas concorrentes acumulam", async () => {
+            const user = await createUser({ email: "ana@example.com", balance: 0 });
+
+            await Promise.all([
+                userRepository.increment(user.id, "balance", 10),
+                userRepository.increment(user.id, "balance", 10),
+                userRepository.increment(user.id, "balance", 10),
+            ]);
+
+            const stored = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+            expect(stored.balance).toBe(30);
+        });
+
+        it("propaga 'select' pro registro retornado", async () => {
+            const user = await createUser({
+                email: "ana@example.com",
+                name: "Ana",
+                balance: 100,
+            });
+
+            const result = await userRepository.increment(user.id, "balance", 10, {
+                select: { id: true, balance: true },
+            });
+
+            expect(result).toEqual({ id: user.id, balance: 110 });
+        });
+
+        it("funciona num campo 'Decimal' (ex: 'price' de 'Post')", async () => {
+            const author = await createUser({ email: "ana@example.com" });
+            const post = await createPost(author.id, { price: "19.90" });
+
+            const result = await postRepository.increment(
+                post.id,
+                "price",
+                new Prisma.Decimal(5.1),
+            );
+
+            expect(Number(result.price)).toBeCloseTo(25.0, 2);
+        });
+
+        it("em um campo nullable atualmente 'NULL', segue a semântica nativa do SQL ('NULL' + value = 'NULL')", async () => {
+            const user = await createUser({ email: "ana@example.com", bonusPoints: null });
+
+            const result = await userRepository.increment(user.id, "bonusPoints", 5);
+
+            expect(result.bonusPoints).toBeNull();
+            expect(
+                (await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).bonusPoints,
+            ).toBeNull();
+        });
+
+        it("participa de uma 'transaction()' compartilhando o client (increment + sum no mesmo callback)", async () => {
+            const user = await createUser({ email: "ana@example.com", balance: 100 });
+
+            const result = await userRepository.transaction(async tx => {
+                const updated = await userRepository.increment(user.id, "balance", 50, { db: tx });
+                const total = await userRepository.sum("balance", {}, { db: tx });
+                return { updated, total };
+            });
+
+            expect(result.updated.balance).toBe(150);
+            expect(result.total).toBe(150);
+            expect((await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).balance).toBe(
+                150,
+            );
+        });
+    });
+
+    describe("agregações (sum/average/min/max) através da VSRepository", () => {
+        it("sum soma o campo entre todos os registros que casam com o 'where' (todos os registros se vazio)", async () => {
+            await createUser({ email: "a@example.com", balance: 100 });
+            await createUser({ email: "b@example.com", balance: 200 });
+            await createUser({ email: "c@example.com", balance: 300 });
+
+            const result = await userRepository.sum("balance");
+
+            expect(result).toBe(600);
+        });
+
+        it("sum respeita um 'where' explícito", async () => {
+            await createUser({ email: "a@example.com", balance: 100, name: "Ana" });
+            await createUser({ email: "b@example.com", balance: 200, name: "Bia" });
+
+            const result = await userRepository.sum("balance", { name: "Ana" });
+
+            expect(result).toBe(100);
+        });
+
+        it("sum retorna 'null' (não '0') quando nenhum registro casa com o 'where'", async () => {
+            await createUser({ email: "a@example.com", balance: 100 });
+
+            const result = await userRepository.sum("balance", {
+                email: "nao-existe@example.com",
+            });
+
+            expect(result).toBeNull();
+        });
+
+        it("average calcula a média aritmética", async () => {
+            await createUser({ email: "a@example.com", balance: 100 });
+            await createUser({ email: "b@example.com", balance: 300 });
+
+            const result = await userRepository.average("balance");
+
+            expect(result).toBe(200);
+        });
+
+        it("min retorna o menor valor", async () => {
+            await createUser({ email: "a@example.com", balance: 100 });
+            await createUser({ email: "b@example.com", balance: 30 });
+            await createUser({ email: "c@example.com", balance: 300 });
+
+            const result = await userRepository.min("balance");
+
+            expect(result).toBe(30);
+        });
+
+        it("max retorna o maior valor", async () => {
+            await createUser({ email: "a@example.com", balance: 100 });
+            await createUser({ email: "b@example.com", balance: 30 });
+            await createUser({ email: "c@example.com", balance: 300 });
+
+            const result = await userRepository.max("balance");
+
+            expect(result).toBe(300);
+        });
+
+        it("num campo 'Decimal' (ex: 'price' de 'Post'), retornam 'number' em vez de 'Decimal'", async () => {
+            const author = await createUser({ email: "ana@example.com" });
+            await createPost(author.id, { price: "10.50" });
+            await createPost(author.id, { price: "20.25" });
+
+            const result = await postRepository.sum("price");
+
+            expect(typeof result).toBe("number");
+            expect(result).toBeCloseTo(30.75, 2);
+        });
+
+        it("ignora registros cujo campo é 'null' (comportamento nativo do SQL 'SUM'/'AVG'/'MIN'/'MAX')", async () => {
+            await createUser({ email: "a@example.com", balance: 100, bonusPoints: null });
+            await createUser({ email: "b@example.com", balance: 200, bonusPoints: 50 });
+
+            const result = await userRepository.sum("bonusPoints");
+
+            expect(result).toBe(50);
         });
     });
 });

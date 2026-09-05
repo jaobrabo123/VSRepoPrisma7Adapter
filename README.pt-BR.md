@@ -33,6 +33,7 @@ Implementação de `VSRepoAdapter` para o [VSRepository v2](https://github.com/j
     - [Como cada método de escrita resolve relations](#como-cada-método-de-escrita-resolve-relations)
   - [`relations` nas options (leitura)](#relations-nas-options-leitura)
 - [`merge`](#merge)
+- [Métodos atômicos e de agregação](#métodos-atômicos-e-de-agregação)
 - [`createMany`/`createManyReturning`/`updateMany`/`updateManyReturning` não suportam nested writes](#createmanycreatemanyreturningupdatemanyupdatemanyreturning-não-suportam-nested-writes)
 - [Limitações por provider](#limitações-por-provider)
 - [Transactions](#transactions)
@@ -197,6 +198,31 @@ const prismaInclude = prismaSelect
 
 Pra relations to-many (`otm`/`mtm`), os itens do registro salvo e os itens de `obj` são casados pela `pk` configurada: um match faz merge dos dois itens, uma `pk` nova (ou sem `pk`) é apenas adicionada. `merge` nunca remove nada.
 
+## Métodos atômicos e de agregação
+
+> Requer `vsrepo` **2.1.0+** — esses métodos foram adicionados ao contrato do `VSRepoAdapter` nessa versão (veja o [CHANGELOG do VSRepository](https://github.com/jaobrabo123/VSRepository/blob/main/CHANGELOG.md#210---2026-09-04-português)).
+
+O adapter implementa os 8 métodos abstratos pros quais `increment`/`decrement`/`multiply`/`divide`/`sum`/`average`/`min`/`max` do `VSRepository` delegam: `incrementOne`, `decrementOne`, `multiplyOne`, `divideOne`, `sum`, `average`, `min`, `max`.
+
+- `incrementOne`/`decrementOne`/`multiplyOne`/`divideOne` traduzem direto pra escrita atômica nativa de campo único do Prisma — `data: { [field]: { increment: value } }` (e `decrement`/`multiply`/`divide`) — então a operação é avaliada **server-side** contra o valor *atual* do registro (`UPDATE ... SET field = field + value`), e não como um fetch-then-save no cliente. O `update()` do Prisma já retorna a linha refletindo o estado *após* a escrita, então o adapter nunca precisa fazer uma leitura extra.
+- `sum`/`average`/`min`/`max` traduzem pro `aggregate()` do Prisma, com `_sum`/`_avg`/`_min`/`_max: { [field]: true }`. O resultado bruto (`number`, `bigint`, uma instância de `Decimal`, ou `null`) é normalizado pra `number | null` — `null` é repassado como está (espelhando o `SUM()`/`AVG()`/`MIN()`/`MAX()` do SQL, que retornam `NULL`, não `0`, sobre um conjunto vazio), e um valor `Decimal`/`DecimalLike` é convertido via seu `.toNumber()`.
+
+```typescript
+// Atômico — avaliado server-side, sem read-modify-write:
+await productRepository.increment(productId, "stock", 10);
+await accountRepository.decrement(accountId, "balance", 50);
+await productRepository.multiply(productId, "price", 1.1); // ex: um reajuste de 10% no preço
+await productRepository.divide(productId, "price", 2);
+
+// Agregação — entre todos os registros que casam com um `where` opcional (todos se omitido):
+const total = await productRepository.sum("price"); // number | null
+const avgPrice = await productRepository.average("price", { active: true });
+const cheapest = await productRepository.min("price");
+const mostExpensive = await productRepository.max("price");
+```
+
+**Campos Decimal** (`Prisma.Decimal`) são totalmente suportados como o `field` dos 8 métodos — o `value` dos métodos atômicos é repassado direto pro Prisma (que aceita `number`, `string`, ou `Decimal`/`DecimalJsLike`), e os métodos de agregação sempre normalizam o resultado pra `number`, nunca uma instância de `Decimal`.
+
 ## `createMany`/`createManyReturning`/`updateMany`/`updateManyReturning` não suportam nested writes
 
 `createMany`, `createManyReturning`, `updateMany` e `updateManyReturning` só aceitam campos escalares no `data`. Se seu payload incluir um campo configurado em `relations` (independente do valor), o adapter lança um `VSRepoPrisma7AdapterError` apontando o campo problemático. Pra um nested write completo, use `create`/`update`/`save` registro por registro, ou envolva várias chamadas de `save` num `saveMany`/`transaction`.
@@ -272,5 +298,5 @@ O adapter usa o `VSLogger` (de `vsrepo`) internamente: todo método loga uma lin
 
 ## Requisitos
 
-- `vsrepo` v2
+- `vsrepo` ^2.1.0
 - `@prisma/client` ^7.10.0
