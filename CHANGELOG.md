@@ -6,6 +6,28 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.1.1] - 2026-09-07
+
+### Added
+- **Stronger constructor validation**, catching more misconfigurations at construction time instead of on the first query:
+  - The Prisma client (first constructor argument) is now validated: passing `null`/`undefined` throws a `VSRepoAdapterError` (code `MISSING_DB_CLIENT`) immediately, instead of failing later with a raw `Cannot read properties of undefined`
+  - `tableName` is now checked against the provided Prisma client: if `prisma[tableName]` doesn't exist as a delegate (e.g. a typo, or a model name that doesn't exist in the generated client), the constructor throws a `VSRepoAdapterError` (code `MODEL_NOT_FOUND`) naming the missing delegate, instead of failing on the first `save`/`get`/etc.
+  - `relations[field].nullable: true` is now rejected when `mode` is not `mto` — `nullable` only applies to `mto`. Validated with a new `VSRepoAdapterError` (code `INVALID_ADAPTER_CONFIG`), same as the rest of the relation schema
+- New `validators/validate-prisma-client.validator.ts`, plus tests covering all three new validations (`tests/config-validation.test.ts`)
+
+---
+
+## [1.1.1] - 2026-09-07 (Português)
+
+### Adicionado
+- **Validação mais forte no construtor**, pegando mais erros de configuração já na construção em vez de na primeira query:
+  - O client Prisma (primeiro argumento do construtor) agora é validado: passar `null`/`undefined` lança um `VSRepoAdapterError` (code `MISSING_DB_CLIENT`) imediatamente, em vez de falhar depois com um `Cannot read properties of undefined` genérico
+  - `tableName` agora é conferido contra o client Prisma fornecido: se `prisma[tableName]` não existir como delegate (ex.: um typo, ou um nome de model que não existe no client gerado), o construtor lança um `VSRepoAdapterError` (code `MODEL_NOT_FOUND`) nomeando o delegate ausente, em vez de falhar no primeiro `save`/`get`/etc.
+  - `relations[campo].nullable: true` agora é rejeitado quando `mode` é diferente de `mto` — `nullable` só se aplica a `mto`. Validado com um novo `VSRepoAdapterError` (code `INVALID_ADAPTER_CONFIG`), igual ao resto do schema de relation
+- Novo `validators/validate-prisma-client.validator.ts`, além de testes cobrindo as três novas validações (`tests/config-validation.test.ts`)
+
+---
+
 ## [1.1.0] - 2026-09-04
 
 ### Added
