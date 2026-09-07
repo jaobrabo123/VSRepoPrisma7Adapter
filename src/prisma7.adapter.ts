@@ -20,11 +20,13 @@ import { parsePrismaWriteData } from "./parsers/data.parser";
 import { mergeEntities } from "./resolvers/merge-entities.resolver";
 import { mapPrismaError } from "./resolvers/map-prisma-error.resolver";
 import { validateAdapterConfig } from "./validators/validate-adapter-config.validator";
+import { validatePrismaClient } from "./validators/validate-prisma-client.validator";
 import { AdapterRelations } from "./types/adapter-relations.type";
 import { VSRepoPrisma7AdapterConfig } from "./types/adapter-config.type";
 import { PrismaArgLike } from "./types/prisma-arg-like.type";
 import { PrismaRepositoryLike } from "./types/prisma-repository-like.type";
 import { PlainObject } from "./types/plain-object.type";
+import { Prisma7ClientLike } from "./types/prisma7-client-like.type";
 
 /**
  * `VSRepoAdapter` implementation for Prisma 7. Translates every method of the
@@ -50,12 +52,14 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
     private readonly logger: VSLogger;
 
     constructor(
-        private readonly prisma: any,
+        private readonly prisma: Prisma7ClientLike,
         config: VSRepoPrisma7AdapterConfig<T>,
     ) {
         super();
 
         const validated = validateAdapterConfig<T>(config);
+
+        validatePrismaClient(prisma, validated.tableName);
 
         this.tableName = validated.tableName;
         this.pkName = validated.pkName as string;
@@ -74,7 +78,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
     }
 
     private getPrismaRepository(db?: any): PrismaRepositoryLike {
-        return db ? db[this.tableName] : this.prisma[this.tableName];
+        return db ? db[this.tableName] : (this.prisma as any)[this.tableName];
     }
 
     /** Resolves the "read" part of a Prisma arg: select/include/orderBy/pagination. */
@@ -250,7 +254,7 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
         options?: { isolationLevel?: any },
     ): Promise<R> {
         try {
-            return await this.prisma.$transaction(fn, options);
+            return await (this.prisma as any).$transaction(fn, options);
         } catch (error) {
             throw mapPrismaError(error, "runInTransaction");
         }
