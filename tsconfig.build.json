@@ -6,7 +6,8 @@
     // As declaracoes de tipo sao geradas automaticamente pelo tsc a partir do `src/`.
     "declaration": true,
     "declarationMap": false,
-    "sourceMap": false
+    "sourceMap": true,
+    "stripInternal": true
   },
   // Apenas o nucleo do adaptador (src/) e empacotado. Scripts de exemplo e os
   // testes ficam fora do build do pacote.
