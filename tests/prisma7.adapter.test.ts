@@ -69,7 +69,7 @@ describe("VSRepoPrisma7Adapter (integração com Postgres real)", () => {
 
             const result = await userAdapter.findOne(
                 { id: user.id },
-                { select: { id: true, name: true }},
+                { select: { id: true, name: true } },
             );
 
             expect(result).toEqual({ id: user.id, name: "Ana" });
@@ -80,10 +80,10 @@ describe("VSRepoPrisma7Adapter (integração com Postgres real)", () => {
             await createPost(user.id, { title: "Post 1" });
             await createPost(user.id, { title: "Post 2" });
 
-            const result = (await userAdapter.findOne(
+            const result = await userAdapter.findOne(
                 { id: user.id },
-                { relations: { posts: true }},
-            ));
+                { relations: { posts: true } },
+            );
 
             expect(result?.posts).toHaveLength(2);
             expect(result?.posts.map((p: Post) => p.title).sort()).toEqual(["Post 1", "Post 2"]);
@@ -96,7 +96,9 @@ describe("VSRepoPrisma7Adapter (integração com Postgres real)", () => {
         });
 
         it("findOneOrThrow rejeita com 'VSRepoAdapterError' (code NOT_FOUND) quando não encontra nada", async () => {
-            await expect(userAdapter.findOneOrThrow({ id: -1 })).rejects.toThrow(VSRepoAdapterError);
+            await expect(userAdapter.findOneOrThrow({ id: -1 })).rejects.toThrow(
+                VSRepoAdapterError,
+            );
 
             try {
                 await userAdapter.findOneOrThrow({ id: -1 });
@@ -141,6 +143,53 @@ describe("VSRepoPrisma7Adapter (integração com Postgres real)", () => {
             expect(result).toBe(2);
         });
 
+        it("count respeita 'pagination' (offset/limit)", async () => {
+            for (let i = 1; i <= 5; i++) {
+                await createUser({ email: `u${i}@example.com`, name: `User${i}` });
+            }
+
+            const result = await userAdapter.count({}, { pagination: { offset: 0, limit: 3 } });
+
+            expect(result).toBe(3);
+        });
+
+        it("count com 'order' não lança erro e retorna o total correto", async () => {
+            await createUser({ email: "a@example.com", name: "Ana" });
+            await createUser({ email: "b@example.com", name: "Bia" });
+            await createUser({ email: "c@example.com", name: "Carlos" });
+            await createUser({ email: "d@example.com", name: "Diana" });
+            await createUser({ email: "e@example.com", name: "Elias" });
+
+            const result = await userAdapter.count({}, { order: { name: "ASC" } });
+
+            expect(result).toBe(5);
+        });
+
+        it("count com 'where' e 'pagination' juntos aplica ambos", async () => {
+            await createUser({ email: "a1@example.com", name: "Ana" });
+            await createUser({ email: "a2@example.com", name: "Ana" });
+            await createUser({ email: "b1@example.com", name: "Bia" });
+            await createUser({ email: "b2@example.com", name: "Bia" });
+            await createUser({ email: "b3@example.com", name: "Bia" });
+
+            const result = await userAdapter.count(
+                { name: "Ana" },
+                { pagination: { offset: 0, limit: 1 } },
+            );
+
+            expect(result).toBe(1);
+        });
+
+        it("count sem options continua funcionando (backward compat)", async () => {
+            await createUser({ email: "a@example.com", name: "Ana" });
+            await createUser({ email: "b@example.com", name: "Bia" });
+            await createUser({ email: "c@example.com", name: "Carlos" });
+
+            const result = await userAdapter.count({});
+
+            expect(result).toBe(3);
+        });
+
         it("exists retorna 'true' quando existe pelo menos um registro", async () => {
             const user = await createUser({ email: "ana@example.com" });
             expect(await userAdapter.exists({ id: user.id })).toBe(true);
@@ -172,7 +221,11 @@ describe("VSRepoPrisma7Adapter (integração com Postgres real)", () => {
         it("save com pk atualiza o registro existente (upsert)", async () => {
             const user = await createUser({ email: "ana@example.com", name: "Ana" });
 
-            const result = await userAdapter.save({ id: user.id, email: user.email, name: "Ana Paula" });
+            const result = await userAdapter.save({
+                id: user.id,
+                email: user.email,
+                name: "Ana Paula",
+            });
 
             expect(result.name).toBe("Ana Paula");
             const stored = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
@@ -219,16 +272,20 @@ describe("VSRepoPrisma7Adapter (integração com Postgres real)", () => {
         });
 
         it("create com um Address aninhado (sem pk) cria os dois registros", async () => {
-            const result = (await userAdapter.create(
+            const result = await userAdapter.create(
                 {
                     email: "ana@example.com",
                     name: "Ana",
                     address: { street: "Rua A", city: "Recife", country: "BR" },
                 },
                 { relations: { address: true } },
-            ));
+            );
 
-            expect(result.address).toMatchObject({ street: "Rua A", city: "Recife", country: "BR" });
+            expect(result.address).toMatchObject({
+                street: "Rua A",
+                city: "Recife",
+                country: "BR",
+            });
 
             const stored = await prisma.address.findUnique({ where: { userId: result.id } });
             expect(stored).not.toBeNull();
@@ -291,14 +348,14 @@ describe("VSRepoPrisma7Adapter (integração com Postgres real)", () => {
         it("create com tags mistas (com e sem pk) cria as novas e conecta as existentes", async () => {
             const existingTag = await createTag({ name: "tutorial" });
 
-            const result = (await postAdapter.create(
+            const result = await postAdapter.create(
                 {
                     title: "Post com Tags",
                     authorId: author.id,
                     tags: [{ name: "novidade" }, { id: existingTag.id, name: "tutorial" }],
                 },
                 { relations: { tags: true } },
-            ));
+            );
 
             expect(result.tags.map((t: Tag) => t.name).sort()).toEqual(["novidade", "tutorial"]);
 
@@ -382,7 +439,10 @@ describe("VSRepoPrisma7Adapter (integração com Postgres real)", () => {
             await createUser({ email: "b@example.com", name: "Ana" });
             await createUser({ email: "c@example.com", name: "Bia" });
 
-            const result = await userAdapter.updateManyReturning({ name: "Ana" }, { name: "Ana Atualizada" });
+            const result = await userAdapter.updateManyReturning(
+                { name: "Ana" },
+                { name: "Ana Atualizada" },
+            );
 
             expect(result).toHaveLength(2);
             expect(result.every(u => u.name === "Ana Atualizada")).toBe(true);
@@ -397,9 +457,9 @@ describe("VSRepoPrisma7Adapter (integração com Postgres real)", () => {
                 relations: { tags: { mode: "mtm", restriction: "set", pk: "id" } },
             });
 
-            await expect(
-                postAdapter.updateManyReturning({}, { tags: [] }),
-            ).rejects.toThrow(VSRepoAdapterError);
+            await expect(postAdapter.updateManyReturning({}, { tags: [] })).rejects.toThrow(
+                VSRepoAdapterError,
+            );
         });
     });
 
@@ -434,7 +494,9 @@ describe("VSRepoPrisma7Adapter (integração com Postgres real)", () => {
                     { email: "duplicado@example.com", name: "Duplicado" },
                 ]);
             } catch (err) {
-                expect((err as VSRepoAdapterError).code).toBe(AdapterErrorCode.UNIQUE_CONSTRAINT_VIOLATION);
+                expect((err as VSRepoAdapterError).code).toBe(
+                    AdapterErrorCode.UNIQUE_CONSTRAINT_VIOLATION,
+                );
             }
 
             // nada deve ter sido persistido: a transação inteira foi desfeita
@@ -447,7 +509,10 @@ describe("VSRepoPrisma7Adapter (integração com Postgres real)", () => {
         it("busca o registro e devolve o merge, sem persistir nada", async () => {
             const user = await createUser({ email: "ana@example.com", name: "Ana" });
 
-            const result = await userAdapter.merge<{ name: string }>({ id: user.id }, { name: "Ana Paula" });
+            const result = await userAdapter.merge<{ name: string }>(
+                { id: user.id },
+                { name: "Ana Paula" },
+            );
 
             expect(result?.name).toBe("Ana Paula");
             const stored = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
@@ -526,9 +591,7 @@ describe("VSRepoPrisma7Adapter (integração com Postgres real)", () => {
             });
 
             await expect(
-                postAdapter.createManyReturning([
-                    { title: "x", authorId: author.id, tags: [tag] },
-                ]),
+                postAdapter.createManyReturning([{ title: "x", authorId: author.id, tags: [tag] }]),
             ).rejects.toThrow(VSRepoAdapterError);
 
             try {
@@ -776,7 +839,7 @@ describe("VSRepoPrisma7Adapter (integração com Postgres real)", () => {
         });
 
         it("saveMany reaproveita um client de transação já ativo (options.db) em vez de abrir uma nova", async () => {
-            await prisma.$transaction(async (tx) => {
+            await prisma.$transaction(async tx => {
                 await userAdapter.saveMany([{ email: "a@example.com", name: "A" }], { db: tx });
 
                 // dentro da mesma transação, o registro já é visível
