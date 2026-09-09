@@ -6,6 +6,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.1.2] - 2026-09-09
+
+### Fixed
+- **`count` now correctly passes `readArg` (pagination, order, select, relations, distinct) to Prisma** — previously, `count` only forwarded `{ where }`, silently ignoring any `pagination`, `order`, `select`, `relations`, or `distinct` options passed through `AdapterMethodOptions`. The method now calls `resolveReadArg(options)` and spreads the result into the Prisma arg (matching the behavior of `findOne`, `findMany`, `update`, etc.), enabling pagination (`offset`/`limit`) and ordering to work as expected with `count`
+
+---
+
+## [1.1.2] - 2026-09-09 (Português)
+
+### Corrigido
+- **`count` agora repassa corretamente o `readArg` (pagination, order, select, relations, distinct) pro Prisma** — anteriormente, o `count` só encaminhava `{ where }`, ignorando silenciosamente quaisquer opções de `pagination`, `order`, `select`, `relations` ou `distinct` passadas via `AdapterMethodOptions`. O método agora chama `resolveReadArg(options)` e espalha o resultado no arg do Prisma (comportamento idêntico ao `findOne`, `findMany`, `update`, etc.), habilitando paginação (`offset`/`limit`) e ordenação no `count`
+
+---
+
 ## [1.1.1] - 2026-09-07
 
 ### Added
