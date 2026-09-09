@@ -544,7 +544,8 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
         const start = this.logger.startPerformLog("run count");
 
         try {
-            const arg = { where: parsePrismaWhere<T>(where) };
+            const readArg = this.resolveReadArg(options);
+            const arg = { ...readArg, where: parsePrismaWhere<T>(where) };
             this.logger.logDebug("Resolved Prisma arg for 'count'", arg);
 
             return await this.getPrismaRepository(options?.db).count(arg);
