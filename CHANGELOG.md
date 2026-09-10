@@ -6,6 +6,20 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.1.3] - 2026-09-10
+
+### Fixed
+- **`runInTransaction` now correctly forwards the `timeoutMs` option to Prisma** — previously, the method passed the whole options object straight to `$transaction`, which only recognizes `isolationLevel`/`maxWait`/`timeout`, so a `timeoutMs` passed through `VSRepository.transaction()` — documented as an adapter option — never reached Prisma. The signature now types options as `VSRepoTransactionOptions` and explicitly maps `timeoutMs` to Prisma's `timeout` (alongside `isolationLevel`), so interactive transactions actually respect the configured timeout
+
+---
+
+## [1.1.3] - 2026-09-10 (Português)
+
+### Corrigido
+- **`runInTransaction` agora repassa corretamente a opção `timeoutMs` pro Prisma** — anteriormente, o método passava o objeto de options inteiro direto pro `$transaction`, que só reconhece `isolationLevel`/`maxWait`/`timeout`, então um `timeoutMs` passado via `VSRepository.transaction()` — documentado como opção do adapter — nunca chegava no Prisma. A assinatura agora tipa as options como `VSRepoTransactionOptions` e mapeia explicitamente `timeoutMs` pro `timeout` do Prisma (junto do `isolationLevel`), fazendo as transactions interativas respeitarem de fato o timeout configurado
+
+---
+
 ## [1.1.2] - 2026-09-09
 
 ### Fixed
