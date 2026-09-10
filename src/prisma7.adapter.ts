@@ -10,6 +10,7 @@ import {
     VSLogLevel,
     VSRepoAdapter,
     VSRepoAdapterError,
+    VSRepoTransactionOptions,
     VSRepoWhere,
 } from "vsrepo";
 import { parsePrismaWhere } from "./parsers/where.parser";
@@ -251,10 +252,13 @@ export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
     /** Runs `fn` inside a native transaction of the underlying ORM/database. */
     public async runInTransaction<R>(
         fn: (tx: any) => Promise<R>,
-        options?: { isolationLevel?: any },
+        options?: VSRepoTransactionOptions,
     ): Promise<R> {
         try {
-            return await (this.prisma as any).$transaction(fn, options);
+            return await (this.prisma as any).$transaction(fn, {
+                isolationLevel: options?.isolationLevel,
+                timeout: options?.timeoutMs,
+            });
         } catch (error) {
             throw mapPrismaError(error, "runInTransaction");
         }
