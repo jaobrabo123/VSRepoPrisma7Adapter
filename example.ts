@@ -12,10 +12,10 @@ import {
     VSRepoWhere,
 } from "vsrepo";
 import { Prisma, PrismaClient } from "./generated/prisma/client";
-import { Prisma7OrmTypes, VSRepoPrisma7Adapter } from "./src";
+import { Prisma7OrmTypes, Prisma7Adapter } from "./src";
 import { prisma } from "./tests/prisma";
 
-type MyOrmTypes = Prisma7OrmTypes<PrismaClient, Prisma.TransactionClient>;
+type MyOrmTypes = Prisma7OrmTypes<PrismaClient>;
 
 type User = Prisma.UserGetPayload<{ include: { posts: true } }>;
 type UserMethodOptions = MethodOptions<User, MyOrmTypes>;
@@ -23,7 +23,7 @@ type UserMethodOptions = MethodOptions<User, MyOrmTypes>;
 class UserRepository extends VSRepository<User, number, MyOrmTypes> {
     constructor() {
         super({
-            adapter: new VSRepoPrisma7Adapter(prisma, {
+            adapter: new Prisma7Adapter(prisma, {
                 pkName: "id",
                 tableName: "user",
                 relations: {

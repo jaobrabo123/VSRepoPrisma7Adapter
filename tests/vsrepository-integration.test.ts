@@ -48,7 +48,7 @@ import { cleanDatabase, prisma } from "./helpers/db";
 import { createPost, createTag, createUser } from "./helpers/fixtures";
 import { Post, User } from "./helpers/entities";
 
-type MyOrmTypes = Prisma7OrmTypes<PrismaClient, Prisma.TransactionClient>;
+type MyOrmTypes = Prisma7OrmTypes<PrismaClient>;
 
 /**
  * Repositório concreto de `User`, no mesmo espírito do `UserRepository` do
