@@ -59,7 +59,7 @@ import { Prisma, PrismaClient } from "./generated/prisma/client";
 import { prisma } from "./prisma";
 
 type User = Prisma.UserGetPayload<{ include: { posts: true } }>;
-type MyOrmTypes = Prisma7OrmTypes<PrismaClient, Prisma.TransactionClient>;
+type MyOrmTypes = Prisma7OrmTypes<PrismaClient>;
 
 class UserRepository extends VSRepository<User, string, MyOrmTypes> {
     constructor() {
@@ -84,7 +84,7 @@ const user = await userRepository.get({ id: "..." }, { relations: { posts: true 
 
 Aqui, o `relations` passado no `options` do método — com a forma `{ campo: true }` — é transformado num `include` do Prisma pelo adapter (ver [`relations` nas options (leitura)](#relations-nas-options-leitura)). Se você fornecer `select`, o `relations`/`include` é ignorado. Não confunda com o `relations` da config do construtor (que descreve como campos de relação são resolvidos em escritas) — a diferença é explicada em [Os dois `relations`](#os-dois-relations).
 
-`Prisma7OrmTypes<DB, TX>` amarra os tipos de retorno de `getDbClient()`/`transaction()` do `VSRepository` aos seus tipos reais e gerados do Prisma — ver [Transactions](#transactions).
+`Prisma7OrmTypes<DB>` amarra os tipos de retorno de `getDbClient()`/`transaction()` do `VSRepository` aos seus tipos reais e gerados do Prisma — ver [Transactions](#transactions).
 
 ## Config do construtor
 
