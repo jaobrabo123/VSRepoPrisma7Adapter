@@ -97,7 +97,7 @@ new Prisma7Adapter(prisma, {
 });
 ```
 
-A config é validada com [valibot](https://valibot.dev/) — um `tableName`/`pkName`/`relations`/`logLevel` inválido lança um `VSRepoPrisma7AdapterError` apontando o campo problemático.
+A config é validada com [valibot](https://valibot.dev/) — um `tableName`/`pkName`/`relations`/`logLevel` inválido lança um `VSRepoAdapterError` apontando o campo problemático.
 
 ## Relations
 
@@ -160,7 +160,7 @@ Controla como `save`/`update`/`upsert` tratam itens de relação que já existem
 | --- | --- |
 | `create` | Só `create`/`connectOrCreate` (sem upsert — ainda não existe nada pra atualizar) |
 | `update` / `upsert` (metade do `update`) / `save` (branch de upsert) | Resolução completa: `create`/`connectOrCreate`/`upsert`/`disconnect`/`delete`/`deleteMany`/`set`, conforme `mode`/`restriction` |
-| `createMany` / `createManyReturning` / `updateMany` / `updateManyReturning` | Não suportado — lança um `VSRepoPrisma7AdapterError` apontando o campo problemático se o payload tiver uma relation configurada |
+| `createMany` / `createManyReturning` / `updateMany` / `updateManyReturning` | Não suportado — lança um `VSRepoAdapterError` apontando o campo problemático se o payload tiver uma relation configurada |
 
 ### `relations` nas options (leitura)
 
@@ -225,7 +225,7 @@ const mostExpensive = await productRepository.max("price");
 
 ## `createMany`/`createManyReturning`/`updateMany`/`updateManyReturning` não suportam nested writes
 
-`createMany`, `createManyReturning`, `updateMany` e `updateManyReturning` só aceitam campos escalares no `data`. Se seu payload incluir um campo configurado em `relations` (independente do valor), o adapter lança um `VSRepoPrisma7AdapterError` apontando o campo problemático. Pra um nested write completo, use `create`/`update`/`save` registro por registro, ou envolva várias chamadas de `save` num `saveMany`/`transaction`.
+`createMany`, `createManyReturning`, `updateMany` e `updateManyReturning` só aceitam campos escalares no `data`. Se seu payload incluir um campo configurado em `relations` (independente do valor), o adapter lança um `VSRepoAdapterError` apontando o campo problemático. Pra um nested write completo, use `create`/`update`/`save` registro por registro, ou envolva várias chamadas de `save` num `saveMany`/`transaction`.
 
 > Nota sobre a ordem de retorno: `createManyReturning` não garante que os registros devolvidos seguem a ordem do payload de entrada (`objs`). O resultado vem de um segundo `findMany` (re-buscando as linhas inseridas/atualizadas pela primary key), então a ordem só é garantida quando você passa `order` nas options.
 

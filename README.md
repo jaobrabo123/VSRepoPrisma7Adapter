@@ -97,7 +97,7 @@ new Prisma7Adapter(prisma, {
 });
 ```
 
-The config is validated with [valibot](https://valibot.dev/) — an invalid `tableName`/`pkName`/`relations`/`logLevel` throws a `VSRepoPrisma7AdapterError` naming the offending field.
+The config is validated with [valibot](https://valibot.dev/) — an invalid `tableName`/`pkName`/`relations`/`logLevel` throws a `VSRepoAdapterError` naming the offending field.
 
 ## Relations
 
@@ -160,7 +160,7 @@ Controls how `save`/`update`/`upsert` handle relation items that already exist (
 | --- | --- |
 | `create` | `create`/`connectOrCreate` only (no upsert — there's nothing to update yet) |
 | `update` / `upsert` (`update` half) / `save` (upsert branch) | Full resolution: `create`/`connectOrCreate`/`upsert`/`disconnect`/`delete`/`deleteMany`/`set`, per `mode`/`restriction` |
-| `createMany` / `createManyReturning` / `updateMany` / `updateManyReturning` | Not supported — throws a `VSRepoPrisma7AdapterError` naming the offending field if the payload contains a configured relation |
+| `createMany` / `createManyReturning` / `updateMany` / `updateManyReturning` | Not supported — throws a `VSRepoAdapterError` naming the offending field if the payload contains a configured relation |
 
 ### `relations` in method options (read)
 
@@ -225,7 +225,7 @@ const mostExpensive = await productRepository.max("price");
 
 ## `createMany`/`createManyReturning`/`updateMany`/`updateManyReturning` don't support nested writes
 
-`createMany`, `createManyReturning`, `updateMany` and `updateManyReturning` only accept scalar fields in their `data`. If your payload includes a field configured in `relations` (regardless of its value), the adapter throws a `VSRepoPrisma7AdapterError` naming the offending field. For a full nested write, use `create`/`update`/`save` one record at a time, or wrap several `save` calls in a `saveMany`/`transaction`.
+`createMany`, `createManyReturning`, `updateMany` and `updateManyReturning` only accept scalar fields in their `data`. If your payload includes a field configured in `relations` (regardless of its value), the adapter throws a `VSRepoAdapterError` naming the offending field. For a full nested write, use `create`/`update`/`save` one record at a time, or wrap several `save` calls in a `saveMany`/`transaction`.
 
 > Note on return order: `createManyReturning` don't guarantee the returned records follow the order of the input payload (`objs`). Their result comes from a second `findMany` (re-querying the inserted/updated rows by primary key), so the order is only guaranteed when you pass `order` in the options.
 
