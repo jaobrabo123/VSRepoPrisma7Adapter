@@ -16,4 +16,5 @@ export type Prisma7ClientLike = {
     $queryRaw: any;
     $queryRawUnsafe: any;
     $on: any;
+    $transaction?: (fn: (tx: any) => any) => any;
 };

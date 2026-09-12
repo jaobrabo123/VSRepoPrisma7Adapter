@@ -16,8 +16,10 @@ import { Prisma7ClientLike } from "./prisma7-client-like.type";
  */
 export type Prisma7OrmTypes<
     DB extends Prisma7ClientLike,
-    TX extends Omit<Prisma7ClientLike, "$on">,
+    TX extends Omit<Prisma7ClientLike, "$on"> | undefined = undefined,
 > = {
     dbClient: DB;
-    dbTransaction: TX;
+    dbTransaction: TX extends undefined
+        ? Parameters<Parameters<NonNullable<DB["$transaction"]>>[0]>[0]
+        : TX;
 };
