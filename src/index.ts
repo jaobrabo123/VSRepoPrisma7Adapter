@@ -1,4 +1,4 @@
-export { VSRepoPrisma7Adapter } from "./prisma7.adapter";
+export { VSRepoPrisma7Adapter, VSRepoPrisma7Adapter as Prisma7Adapter } from "./prisma7.adapter";
 
 export type { Relation } from "./types/relation.type";
 export type { Prisma7OrmTypes } from "./types/prisma7-orm-types.type";
