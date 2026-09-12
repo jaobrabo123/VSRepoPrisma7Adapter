@@ -41,7 +41,10 @@ function omitKey(item: PlainObject, key: string): PlainObject {
     return clone;
 }
 
-function splitByPk(items: PlainObject[], pk: string): { withPk: PlainObject[]; withoutPk: PlainObject[] } {
+function splitByPk(
+    items: PlainObject[],
+    pk: string,
+): { withPk: PlainObject[]; withoutPk: PlainObject[] } {
     const withPk: PlainObject[] = [];
     const withoutPk: PlainObject[] = [];
 
@@ -95,7 +98,10 @@ function parseToOneRelation(
     };
 }
 
-function parseToManyRelation(field: PlainObject[], relation: Relation<{}>): { create: PlainObject; update: PlainObject } {
+function parseToManyRelation(
+    field: PlainObject[],
+    relation: Relation<{}>,
+): { create: PlainObject; update: PlainObject } {
     const { withPk, withoutPk } = splitByPk(field, relation.pk);
 
     const connectOrCreate = withPk.map(item => ({
@@ -103,11 +109,14 @@ function parseToManyRelation(field: PlainObject[], relation: Relation<{}>): { cr
         create: item,
     }));
 
-    const upsert = withPk.map(item => ({
-        where: { [relation.pk]: item[relation.pk] },
-        create: item,
-        update: omitKey(item, relation.pk),
-    }));
+    const upsert =
+        relation.mode === "mtm"
+            ? undefined
+            : withPk.map(item => ({
+                  where: { [relation.pk]: item[relation.pk] },
+                  create: item,
+                  update: omitKey(item, relation.pk),
+              }));
 
     const create = { create: withoutPk, connectOrCreate };
 
@@ -127,7 +136,9 @@ function parseToManyRelation(field: PlainObject[], relation: Relation<{}>): { cr
             relation.mode === "mtm"
                 ? { set: [], create: withoutPk, connectOrCreate }
                 : {
-                      deleteMany: { [relation.pk]: { notIn: withPk.map(item => item[relation.pk]) } },
+                      deleteMany: {
+                          [relation.pk]: { notIn: withPk.map(item => item[relation.pk]) },
+                      },
                       create: withoutPk,
                       upsert,
                   },

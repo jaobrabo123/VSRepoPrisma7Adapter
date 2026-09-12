@@ -54,17 +54,17 @@ Both `vsrepo` and `@vsrepo/prisma7-adapter` are published to npm and ready to us
 
 ```typescript
 import { VSRepository, VSLogLevel } from "vsrepo";
-import { VSRepoPrisma7Adapter, Prisma7OrmTypes } from "@vsrepo/prisma7-adapter";
+import { Prisma7Adapter, Prisma7OrmTypes } from "@vsrepo/prisma7-adapter";
 import { Prisma, PrismaClient } from "./generated/prisma/client";
 import { prisma } from "./prisma";
 
 type User = Prisma.UserGetPayload<{ include: { posts: true } }>;
-type MyOrmTypes = Prisma7OrmTypes<PrismaClient, Prisma.TransactionClient>;
+type MyOrmTypes = Prisma7OrmTypes<PrismaClient>;
 
 class UserRepository extends VSRepository<User, string, MyOrmTypes> {
     constructor() {
         super({
-            adapter: new VSRepoPrisma7Adapter(prisma, {
+            adapter: new Prisma7Adapter(prisma, {
                 tableName: "user",
                 pkName: "id",
                 relations: {
@@ -84,12 +84,12 @@ const user = await userRepository.get({ id: "..." }, { relations: { posts: true 
 
 Here the `relations` you pass in the method `options` — shaped like `{ field: true }` — is transformed into a Prisma `include` by the adapter (see [`relations` in method options (read)](#relations-in-method-options-read)). If you supply `select`, the `relations`/`include` is ignored. Don't confuse it with the constructor-config `relations`, which describes how relation fields are resolved in write payloads — the difference is explained in [The two `relations`](#the-two-relations).
 
-`Prisma7OrmTypes<DB, TX>` ties `VSRepository`'s `getDbClient()`/`transaction()` return types to your real, generated Prisma types — see [Transactions](#transactions).
+`Prisma7OrmTypes<DB>` ties `VSRepository`'s `getDbClient()`/`transaction()` return types to your real, generated Prisma types — see [Transactions](#transactions).
 
 ## Constructor config
 
 ```typescript
-new VSRepoPrisma7Adapter(prisma, {
+new Prisma7Adapter(prisma, {
     tableName: "user", // required — the Prisma Client model/delegate name, as in `prisma.user`
     pkName: "id",       // required — the entity's primary key field name
     relations: { ... }, // optional — see "relations in the constructor (write)" below
@@ -97,7 +97,7 @@ new VSRepoPrisma7Adapter(prisma, {
 });
 ```
 
-The config is validated with [valibot](https://valibot.dev/) — an invalid `tableName`/`pkName`/`relations`/`logLevel` throws a `VSRepoPrisma7AdapterError` naming the offending field.
+The config is validated with [valibot](https://valibot.dev/) — an invalid `tableName`/`pkName`/`relations`/`logLevel` throws a `VSRepoAdapterError` naming the offending field.
 
 ## Relations
 
@@ -107,7 +107,7 @@ The name `relations` appears in **two different places** in the API, with **diff
 
 | | `relations` in the **constructor** | `relations` in **method options** |
 | --- | --- | --- |
-| Where you define it | `new VSRepoPrisma7Adapter(prisma, { relations: ... })` | `repository.get(where, { relations: ... })` — and other methods |
+| Where you define it | `new Prisma7Adapter(prisma, { relations: ... })` | `repository.get(where, { relations: ... })` — and other methods |
 | Shape | One **config object** per field: `{ mode, restriction, pk, nullable? }` | One **`true`/sub-object** per field: `{ posts: true }` |
 | Purpose | **Write** — when a `create`/`update`/`upsert`/`save`/`merge` payload contains a relation field, tells the adapter how to turn it into a Prisma nested write (`create`/`connectOrCreate`/`upsert`/`disconnect`/`deleteMany`/`set`) | **Read** — eager loading: which relations to fetch alongside the result (becomes a Prisma `include`) |
 | Consumed by | `parsePrismaWriteData` / `mergeEntities` (write resolvers) | `parsePrismaInclude` (via `resolveReadArg`) |
@@ -160,7 +160,7 @@ Controls how `save`/`update`/`upsert` handle relation items that already exist (
 | --- | --- |
 | `create` | `create`/`connectOrCreate` only (no upsert — there's nothing to update yet) |
 | `update` / `upsert` (`update` half) / `save` (upsert branch) | Full resolution: `create`/`connectOrCreate`/`upsert`/`disconnect`/`delete`/`deleteMany`/`set`, per `mode`/`restriction` |
-| `createMany` / `createManyReturning` / `updateMany` / `updateManyReturning` | Not supported — throws a `VSRepoPrisma7AdapterError` naming the offending field if the payload contains a configured relation |
+| `createMany` / `createManyReturning` / `updateMany` / `updateManyReturning` | Not supported — throws a `VSRepoAdapterError` naming the offending field if the payload contains a configured relation |
 
 ### `relations` in method options (read)
 
@@ -225,7 +225,7 @@ const mostExpensive = await productRepository.max("price");
 
 ## `createMany`/`createManyReturning`/`updateMany`/`updateManyReturning` don't support nested writes
 
-`createMany`, `createManyReturning`, `updateMany` and `updateManyReturning` only accept scalar fields in their `data`. If your payload includes a field configured in `relations` (regardless of its value), the adapter throws a `VSRepoPrisma7AdapterError` naming the offending field. For a full nested write, use `create`/`update`/`save` one record at a time, or wrap several `save` calls in a `saveMany`/`transaction`.
+`createMany`, `createManyReturning`, `updateMany` and `updateManyReturning` only accept scalar fields in their `data`. If your payload includes a field configured in `relations` (regardless of its value), the adapter throws a `VSRepoAdapterError` naming the offending field. For a full nested write, use `create`/`update`/`save` one record at a time, or wrap several `save` calls in a `saveMany`/`transaction`.
 
 > Note on return order: `createManyReturning` don't guarantee the returned records follow the order of the input payload (`objs`). Their result comes from a second `findMany` (re-querying the inserted/updated rows by primary key), so the order is only guaranteed when you pass `order` in the options.
 

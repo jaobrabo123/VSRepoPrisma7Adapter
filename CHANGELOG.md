@@ -6,6 +6,28 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.1.4] - 2026-09-12
+
+### Adicionado
+- **The `Prisma7OrmTypes` utility type now only requires the `PrismaClient` type to infer ORM types** – previously, it required both `PrismaClient` and `Prisma.TransactionClient` types; now, the transaction type is inferred from the `PrismaClient`'s `$transaction` method
+- **New alias `Prisma7Adapter` for `VSRepoPrisma7Adapter`** - `VSRepoPrisma7Adapter` can now *also* be imported as `Prisma7Adapter`
+
+### Desempenho
+- **The payload calculation for `to-many` relations now only calculates the `upsert` for `one-to-many` relations** – previously, the `upsert` was also calculated for `many-to-many` relations but was not used.
+
+---
+
+## [1.1.4] - 2026-09-12 (Português)
+
+### Adicionado
+- **O tipo utilitário `Prisma7OrmTypes` agora só precisa da tipagem do PrismaClient para inferir as tipagens do ORM** - antes precisava da tipagem do PrismaClient e do Prisma.TransactionClient, agora o tipo da transaction é inferido pelo método `$transaction` do PrismaClient
+- **Novo alias `Prisma7Adapter` para o `VSRepoPrisma7Adapter`** - agora o `VSRepoPrisma7Adapter` *também* pode ser importado como `Prisma7Adapter`
+
+### Desempenho
+- **Agora o cálculo do payload de relações `to-many` só calcula o `upsert` para relações `one-to-many`** - antes o `upsert` era calculado pro `many-to-many` também, mas não era utilizado
+
+---
+
 ## [1.1.3] - 2026-09-10
 
 ### Fixed

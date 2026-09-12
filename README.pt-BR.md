@@ -54,17 +54,17 @@ Tanto o `vsrepo` quanto o `@vsrepo/prisma7-adapter` já foram publicados no npm 
 
 ```typescript
 import { VSRepository, VSLogLevel } from "vsrepo";
-import { VSRepoPrisma7Adapter, Prisma7OrmTypes } from "@vsrepo/prisma7-adapter";
+import { Prisma7Adapter, Prisma7OrmTypes } from "@vsrepo/prisma7-adapter";
 import { Prisma, PrismaClient } from "./generated/prisma/client";
 import { prisma } from "./prisma";
 
 type User = Prisma.UserGetPayload<{ include: { posts: true } }>;
-type MyOrmTypes = Prisma7OrmTypes<PrismaClient, Prisma.TransactionClient>;
+type MyOrmTypes = Prisma7OrmTypes<PrismaClient>;
 
 class UserRepository extends VSRepository<User, string, MyOrmTypes> {
     constructor() {
         super({
-            adapter: new VSRepoPrisma7Adapter(prisma, {
+            adapter: new Prisma7Adapter(prisma, {
                 tableName: "user",
                 pkName: "id",
                 relations: {
@@ -84,12 +84,12 @@ const user = await userRepository.get({ id: "..." }, { relations: { posts: true 
 
 Aqui, o `relations` passado no `options` do método — com a forma `{ campo: true }` — é transformado num `include` do Prisma pelo adapter (ver [`relations` nas options (leitura)](#relations-nas-options-leitura)). Se você fornecer `select`, o `relations`/`include` é ignorado. Não confunda com o `relations` da config do construtor (que descreve como campos de relação são resolvidos em escritas) — a diferença é explicada em [Os dois `relations`](#os-dois-relations).
 
-`Prisma7OrmTypes<DB, TX>` amarra os tipos de retorno de `getDbClient()`/`transaction()` do `VSRepository` aos seus tipos reais e gerados do Prisma — ver [Transactions](#transactions).
+`Prisma7OrmTypes<DB>` amarra os tipos de retorno de `getDbClient()`/`transaction()` do `VSRepository` aos seus tipos reais e gerados do Prisma — ver [Transactions](#transactions).
 
 ## Config do construtor
 
 ```typescript
-new VSRepoPrisma7Adapter(prisma, {
+new Prisma7Adapter(prisma, {
     tableName: "user", // obrigatório — nome do model/delegate do Prisma Client, como em `prisma.user`
     pkName: "id",       // obrigatório — nome do campo de primary key da entidade
     relations: { ... }, // opcional — ver "relations no construtor (escrita)" abaixo
@@ -97,7 +97,7 @@ new VSRepoPrisma7Adapter(prisma, {
 });
 ```
 
-A config é validada com [valibot](https://valibot.dev/) — um `tableName`/`pkName`/`relations`/`logLevel` inválido lança um `VSRepoPrisma7AdapterError` apontando o campo problemático.
+A config é validada com [valibot](https://valibot.dev/) — um `tableName`/`pkName`/`relations`/`logLevel` inválido lança um `VSRepoAdapterError` apontando o campo problemático.
 
 ## Relations
 
@@ -107,7 +107,7 @@ O nome `relations` aparece em **dois lugares diferentes** da API, com **formas e
 
 | | `relations` no **construtor** | `relations` nas **options** |
 | --- | --- | --- |
-| Onde você define | `new VSRepoPrisma7Adapter(prisma, { relations: ... })` | `repository.get(where, { relations: ... })` — e demais métodos |
+| Onde você define | `new Prisma7Adapter(prisma, { relations: ... })` | `repository.get(where, { relations: ... })` — e demais métodos |
 | Formato | Um objeto de **configuração** por campo: `{ mode, restriction, pk, nullable? }` | Um objeto por campo **só com `true` ou sub-objeto**: `{ posts: true }` |
 | Propósito | **Escrita** — quando um payload de `create`/`update`/`upsert`/`save`/`merge` tem campo de relação, diz como transformá-lo num nested write do Prisma (`create`/`connectOrCreate`/`upsert`/`disconnect`/`deleteMany`/`set`) | **Leitura** — eager loading: quais relations trazer junto no resultado (vira um `include` do Prisma) |
 | Quem consome | `parsePrismaWriteData` / `mergeEntities` (resolvers de escrita) | `parsePrismaInclude` (via `resolveReadArg`) |
@@ -160,7 +160,7 @@ Controla como `save`/`update`/`upsert` tratam itens de relação que já existem
 | --- | --- |
 | `create` | Só `create`/`connectOrCreate` (sem upsert — ainda não existe nada pra atualizar) |
 | `update` / `upsert` (metade do `update`) / `save` (branch de upsert) | Resolução completa: `create`/`connectOrCreate`/`upsert`/`disconnect`/`delete`/`deleteMany`/`set`, conforme `mode`/`restriction` |
-| `createMany` / `createManyReturning` / `updateMany` / `updateManyReturning` | Não suportado — lança um `VSRepoPrisma7AdapterError` apontando o campo problemático se o payload tiver uma relation configurada |
+| `createMany` / `createManyReturning` / `updateMany` / `updateManyReturning` | Não suportado — lança um `VSRepoAdapterError` apontando o campo problemático se o payload tiver uma relation configurada |
 
 ### `relations` nas options (leitura)
 
@@ -225,7 +225,7 @@ const mostExpensive = await productRepository.max("price");
 
 ## `createMany`/`createManyReturning`/`updateMany`/`updateManyReturning` não suportam nested writes
 
-`createMany`, `createManyReturning`, `updateMany` e `updateManyReturning` só aceitam campos escalares no `data`. Se seu payload incluir um campo configurado em `relations` (independente do valor), o adapter lança um `VSRepoPrisma7AdapterError` apontando o campo problemático. Pra um nested write completo, use `create`/`update`/`save` registro por registro, ou envolva várias chamadas de `save` num `saveMany`/`transaction`.
+`createMany`, `createManyReturning`, `updateMany` e `updateManyReturning` só aceitam campos escalares no `data`. Se seu payload incluir um campo configurado em `relations` (independente do valor), o adapter lança um `VSRepoAdapterError` apontando o campo problemático. Pra um nested write completo, use `create`/`update`/`save` registro por registro, ou envolva várias chamadas de `save` num `saveMany`/`transaction`.
 
 > Nota sobre a ordem de retorno: `createManyReturning` não garante que os registros devolvidos seguem a ordem do payload de entrada (`objs`). O resultado vem de um segundo `findMany` (re-buscando as linhas inseridas/atualizadas pela primary key), então a ordem só é garantida quando você passa `order` nas options.
 
