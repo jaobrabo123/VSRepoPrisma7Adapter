@@ -54,7 +54,7 @@ Both `vsrepo` and `@vsrepo/prisma7-adapter` are published to npm and ready to us
 
 ```typescript
 import { VSRepository, VSLogLevel } from "vsrepo";
-import { VSRepoPrisma7Adapter, Prisma7OrmTypes } from "@vsrepo/prisma7-adapter";
+import { Prisma7Adapter, Prisma7OrmTypes } from "@vsrepo/prisma7-adapter";
 import { Prisma, PrismaClient } from "./generated/prisma/client";
 import { prisma } from "./prisma";
 
@@ -64,7 +64,7 @@ type MyOrmTypes = Prisma7OrmTypes<PrismaClient>;
 class UserRepository extends VSRepository<User, string, MyOrmTypes> {
     constructor() {
         super({
-            adapter: new VSRepoPrisma7Adapter(prisma, {
+            adapter: new Prisma7Adapter(prisma, {
                 tableName: "user",
                 pkName: "id",
                 relations: {
@@ -89,7 +89,7 @@ Here the `relations` you pass in the method `options` — shaped like `{ field: 
 ## Constructor config
 
 ```typescript
-new VSRepoPrisma7Adapter(prisma, {
+new Prisma7Adapter(prisma, {
     tableName: "user", // required — the Prisma Client model/delegate name, as in `prisma.user`
     pkName: "id",       // required — the entity's primary key field name
     relations: { ... }, // optional — see "relations in the constructor (write)" below
@@ -107,7 +107,7 @@ The name `relations` appears in **two different places** in the API, with **diff
 
 | | `relations` in the **constructor** | `relations` in **method options** |
 | --- | --- | --- |
-| Where you define it | `new VSRepoPrisma7Adapter(prisma, { relations: ... })` | `repository.get(where, { relations: ... })` — and other methods |
+| Where you define it | `new Prisma7Adapter(prisma, { relations: ... })` | `repository.get(where, { relations: ... })` — and other methods |
 | Shape | One **config object** per field: `{ mode, restriction, pk, nullable? }` | One **`true`/sub-object** per field: `{ posts: true }` |
 | Purpose | **Write** — when a `create`/`update`/`upsert`/`save`/`merge` payload contains a relation field, tells the adapter how to turn it into a Prisma nested write (`create`/`connectOrCreate`/`upsert`/`disconnect`/`deleteMany`/`set`) | **Read** — eager loading: which relations to fetch alongside the result (becomes a Prisma `include`) |
 | Consumed by | `parsePrismaWriteData` / `mergeEntities` (write resolvers) | `parsePrismaInclude` (via `resolveReadArg`) |
