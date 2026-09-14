@@ -26,6 +26,7 @@
  * usam só `.update`, e `save()`/`upsert()` usam os dois.
  */
 
+import { AdapterErrorCode, VSRepoAdapterError } from "vsrepo";
 import { AdapterRelations } from "../types/adapter-relations.type";
 import { PlainObject } from "../types/plain-object.type";
 import { Relation } from "../types/relation.type";
@@ -60,18 +61,26 @@ function parseToOneRelation(
     relation: Relation<{}>,
 ): { create?: PlainObject; update?: PlainObject } {
     if (field === null) {
-        if (relation.mode === "oto" && relation.restriction === "set") {
-            return { update: { delete: true } };
+        if (!relation.nullable) {
+            throw new VSRepoAdapterError(
+                `You cannot provide null for a to-one relation when it is not nullable.`,
+                AdapterErrorCode.INVALID_DATA,
+                null,
+            );
         }
-        if (relation.mode === "mto" && relation.nullable) {
+        if (relation.mode === "oto") {
+            if (relation.restriction === "set") {
+                return { update: { delete: true } };
+            }
             return { update: { disconnect: true } };
         }
-        return {};
+        // relation.mode === "mto"
+        return { update: { disconnect: true } };
     }
 
     const pkValue = field[relation.pk];
 
-    if (pkValue == null) {
+    if (pkValue === undefined) {
         return {
             create: { create: field },
             update:
