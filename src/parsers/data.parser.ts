@@ -13,8 +13,11 @@
  *    update, a não ser que `restriction: "add"`, que usa só `create`)
  *  - to-one com PK no valor enviado               -> `connectOrCreate` (e
  *    `upsert` no update, a não ser que `restriction: "add"`)
- *  - to-one enviado como `null`                    -> `delete` (`oto` +
- *    `restriction: "set"`) ou `disconnect` (`mto` + `nullable`)
+ *  - to-one enviado como `null` com `nullable`     -> `delete` (`oto` +
+ *    `restriction: "set"`) ou `disconnect` (`oto` com `restriction: "add"` /
+ *    `mto`; um `oto` não "desconecta" no `update`, a linha possuída é apagada)
+ *  - to-one enviado como `null` sem `nullable`     -> lança `VSRepoAdapterError`
+ *    (code `INVALID_DATA`)
  *  - to-many (`otm`/`mtm`) — itens são separados entre "com PK" e "sem PK":
  *    os sem PK viram `create`, os com PK viram `connectOrCreate` no create e
  *    `upsert` no update; com `restriction: "set"`, itens de `otm` que não
@@ -26,6 +29,7 @@
  * usam só `.update`, e `save()`/`upsert()` usam os dois.
  */
 
+import { AdapterErrorCode, VSRepoAdapterError } from "vsrepo";
 import { AdapterRelations } from "../types/adapter-relations.type";
 import { PlainObject } from "../types/plain-object.type";
 import { Relation } from "../types/relation.type";
@@ -60,18 +64,26 @@ function parseToOneRelation(
     relation: Relation<{}>,
 ): { create?: PlainObject; update?: PlainObject } {
     if (field === null) {
-        if (relation.mode === "oto" && relation.restriction === "set") {
-            return { update: { delete: true } };
+        if (!relation.nullable) {
+            throw new VSRepoAdapterError(
+                `You cannot provide null for a to-one relation when it is not nullable.`,
+                AdapterErrorCode.INVALID_DATA,
+                null,
+            );
         }
-        if (relation.mode === "mto" && relation.nullable) {
+        if (relation.mode === "oto") {
+            if (relation.restriction === "set") {
+                return { update: { delete: true } };
+            }
             return { update: { disconnect: true } };
         }
-        return {};
+        // relation.mode === "mto"
+        return { update: { disconnect: true } };
     }
 
     const pkValue = field[relation.pk];
 
-    if (pkValue == null) {
+    if (pkValue == undefined) {
         return {
             create: { create: field },
             update:

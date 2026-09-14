@@ -10,7 +10,7 @@ export const relationSchema = v.pipe(
     }),
     v.partialCheck(
         [["nullable"], ["mode"]],
-        input => !(input.nullable === true && input.mode !== "mto"),
-        "'nullable: true' is only valid for 'mto' relations; 'otm', 'mtm' and 'oto' relations do not support 'nullable'.",
+        input => !(input.nullable === true && input.mode !== "mto" && input.mode !== "oto"),
+        "'nullable: true' is only valid for 'mto' and 'oto' relations; 'otm' and 'mtm' relations do not support 'nullable'.",
     ),
 );

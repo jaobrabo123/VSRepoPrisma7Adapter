@@ -266,7 +266,7 @@ describe("VSRepoPrisma7Adapter (integração com Postgres real)", () => {
                 pkName: "id",
                 logLevel: VSLogLevel.ERROR,
                 relations: {
-                    address: { mode: "oto", restriction: "set", pk: "id" },
+                    address: { mode: "oto", restriction: "set", pk: "id", nullable: true },
                 },
             });
         });
@@ -301,6 +301,36 @@ describe("VSRepoPrisma7Adapter (integração com Postgres real)", () => {
 
             const stored = await prisma.address.findUnique({ where: { userId: user.id } });
             expect(stored).toBeNull();
+        });
+
+        it("update enviando o Address como 'null' numa relation oto sem 'nullable' lança 'VSRepoAdapterError' (code INVALID_DATA) e não apaga o Address", async () => {
+            const nonNullableAdapter = new VSRepoPrisma7Adapter<User>(prisma, {
+                tableName: "user",
+                pkName: "id",
+                logLevel: VSLogLevel.ERROR,
+                relations: {
+                    address: { mode: "oto", restriction: "set", pk: "id" },
+                },
+            });
+
+            const user = await createUser({ email: "ana@example.com" });
+            await prisma.address.create({
+                data: { street: "Rua A", city: "Recife", country: "BR", userId: user.id },
+            });
+
+            await expect(
+                nonNullableAdapter.update({ id: user.id }, { address: null }),
+            ).rejects.toThrow(VSRepoAdapterError);
+
+            try {
+                await nonNullableAdapter.update({ id: user.id }, { address: null });
+                throw new Error("deveria ter lançado VSRepoAdapterError");
+            } catch (err) {
+                expect((err as VSRepoAdapterError).code).toBe(AdapterErrorCode.INVALID_DATA);
+            }
+
+            const stored = await prisma.address.findUnique({ where: { userId: user.id } });
+            expect(stored).not.toBeNull();
         });
 
         it("update de um Address existente (com pk) faz upsert do Address aninhado", async () => {

@@ -179,7 +179,7 @@ describe("VSRepoPrisma7Adapter — validação da config do construtor", () => {
         }).not.toThrow();
     });
 
-    it("rejeita 'nullable: true' com mode 'oto'", () => {
+    it("aceita 'nullable: true' com mode 'oto'", () => {
         expect(() => {
             new VSRepoPrisma7Adapter<User>(fakePrisma, {
                 tableName: "user",
@@ -188,7 +188,7 @@ describe("VSRepoPrisma7Adapter — validação da config do construtor", () => {
                     address: { mode: "oto", restriction: "set", pk: "id", nullable: true },
                 } as any,
             });
-        }).toThrow(VSRepoAdapterError);
+        }).not.toThrow();
     });
 
     it("aceita 'otm'/'mtm' sem 'nullable' (o caso comum)", () => {

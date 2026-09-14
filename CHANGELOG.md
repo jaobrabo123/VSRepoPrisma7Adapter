@@ -6,6 +6,36 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.1.5] - 2026-09-14
+
+### Added
+- **`nullable` support for `oto` (one-to-one) relations** — `nullable: true` is now permitted and validated for `oto` relations (previously restricted to `mto`), allowing optional one-to-one relationships to be configured
+
+### Fixed
+- **Robust `null` handling and validation in to-one relations (`oto` / `mto`)**:
+  - Providing `null` for a to-one relation when `nullable` is omitted or `false` now explicitly throws a `VSRepoAdapterError` (code `INVALID_DATA`), preventing silent unexpected behaviors or unintended deletions
+  - When `nullable: true`:
+    - For `oto` with `restriction: "set"`, passing `null` resolves to `{ delete: true }` on update (the owned row is removed)
+    - For `oto` with `restriction: "add"` or `mto`, passing `null` resolves to `{ disconnect: true }` on update
+  - In `parseToOneRelation`, primary key existence is now checked against `undefined` (`pkValue == undefined`) instead of `null`, preventing false positives when evaluating the relation payload's identifier
+
+---
+
+## [1.1.5] - 2026-09-14 (Português)
+
+### Adicionado
+- **Suporte a `nullable` para relações `oto` (one-to-one)** — a opção `nullable: true` agora é permitida e validada também para relações `oto` (anteriormente restrita a `mto`), possibilitando a configuração de relações um-para-um opcionais
+
+### Corrigido
+- **Tratamento e validação robusta de `null` em relações to-one (`oto` / `mto`)**:
+  - Enviar `null` para uma relação to-one quando `nullable` estiver ausente ou `false` agora lança explicitamente um `VSRepoAdapterError` (código `INVALID_DATA`), evitando comportamentos inesperados ou deleções não intencionais
+  - Quando `nullable: true`:
+    - Para `oto` com `restriction: "set"`, passar `null` resolve para `{ delete: true }` no update (a linha dependente é removida)
+    - Para `oto` com `restriction: "add"` ou `mto`, passar `null` resolve para `{ disconnect: true }` no update
+  - No `parseToOneRelation`, a verificação da presença de chave primária agora compara com `undefined` (`pkValue == undefined`) em vez de `null`, prevenindo falsos positivos na avaliação do identificador do payload da relação
+
+---
+
 ## [1.1.4] - 2026-09-12
 
 ### Added

@@ -20,6 +20,8 @@ type MyOrmTypes = Prisma7OrmTypes<PrismaClient>;
 type User = Prisma.UserGetPayload<{ include: { posts: true } }>;
 type UserMethodOptions = MethodOptions<User, MyOrmTypes>;
 
+type Address = Prisma.AddressGetPayload<{ include: { user: true } }>;
+
 class UserRepository extends VSRepository<User, number, MyOrmTypes> {
     constructor() {
         super({
@@ -58,6 +60,28 @@ class UserRepository extends VSRepository<User, number, MyOrmTypes> {
 }
 
 const userRepository = new UserRepository();
+
+export class AddressRepository extends VSRepository<Address, number, MyOrmTypes> {
+    constructor() {
+        super({
+            adapter: new Prisma7Adapter(prisma, {
+                pkName: "id",
+                tableName: "address",
+                relations: {
+                    user: {
+                        mode: "oto",
+                        pk: "id",
+                        restriction: "set",
+                        nullable: true,
+                    },
+                },
+            }),
+            pkName: "id",
+        });
+    }
+}
+
+const addressRepository = new AddressRepository();
 
 async function example() {
     const result = await userRepository.saveList(
