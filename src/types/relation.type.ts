@@ -13,8 +13,11 @@
  * - `pk`: name of the field used as the identifier of the related record,
  *   used to decide between `create` (no pk in the payload) and
  *   `connectOrCreate`/`upsert` (pk present).
- * - `nullable`: for `mto` relations, whether the field accepts being set to
- *   `null` (resolved as `disconnect`).
+ * - `nullable`: for `oto`/`mto` relations, whether the field accepts being set
+ *   to `null`. When `true`, sending `null` on update resolves to `delete`
+ *   (`oto` + `restriction: "set"`) or `disconnect` (`oto` + `restriction:
+ *   "add"`, and `mto`). When `false`/omitted, sending `null` for a to-one
+ *   relation throws a `VSRepoAdapterError` (code `INVALID_DATA`).
  *
  * @publicApi
  */

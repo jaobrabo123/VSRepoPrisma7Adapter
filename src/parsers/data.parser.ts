@@ -13,8 +13,11 @@
  *    update, a não ser que `restriction: "add"`, que usa só `create`)
  *  - to-one com PK no valor enviado               -> `connectOrCreate` (e
  *    `upsert` no update, a não ser que `restriction: "add"`)
- *  - to-one enviado como `null`                    -> `delete` (`oto` +
- *    `restriction: "set"`) ou `disconnect` (`mto` + `nullable`)
+ *  - to-one enviado como `null` com `nullable`     -> `delete` (`oto` +
+ *    `restriction: "set"`) ou `disconnect` (`oto` com `restriction: "add"` /
+ *    `mto`; um `oto` não "desconecta" no `update`, a linha possuída é apagada)
+ *  - to-one enviado como `null` sem `nullable`     -> lança `VSRepoAdapterError`
+ *    (code `INVALID_DATA`)
  *  - to-many (`otm`/`mtm`) — itens são separados entre "com PK" e "sem PK":
  *    os sem PK viram `create`, os com PK viram `connectOrCreate` no create e
  *    `upsert` no update; com `restriction: "set"`, itens de `otm` que não
@@ -80,7 +83,7 @@ function parseToOneRelation(
 
     const pkValue = field[relation.pk];
 
-    if (pkValue === undefined) {
+    if (pkValue == undefined) {
         return {
             create: { create: field },
             update:

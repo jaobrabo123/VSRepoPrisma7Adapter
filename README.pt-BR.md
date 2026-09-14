@@ -147,12 +147,12 @@ Cardinalidade da relation, do ponto de vista da entidade dona do campo:
 Controla como `save`/`update`/`upsert` tratam itens de relação que já existem (casados pela `pk`) e, pra relations to-many, itens que **não** vieram no payload:
 
 - **`"add"`** — só cria/conecta/faz upsert dos itens enviados. Itens já existentes que não estão no payload permanecem intocados.
-- **`"set"`** — igual a `"add"`, mas também remove o que não foi enviado: em `otm` roda um `deleteMany` nos itens que faltam no array; em `mtm` reseta o vínculo (`set: []`) antes de reconectar; em `oto`/`mto` enviar `null` desconecta/apaga a relation (ver abaixo).
+- **`"set"`** — igual a `"add"`, mas também remove o que não foi enviado: em `otm` roda um `deleteMany` nos itens que faltam no array; em `mtm` reseta o vínculo (`set: []`) antes de reconectar; em `oto`/`mto` com `nullable: true`, enviar `null` apaga/desconecta a relation (ver abaixo).
 
 #### `pk` e `nullable`
 
 - **`pk`** — o campo usado pra identificar um registro relacionado já existente. Um item **com** `pk` no payload vira um `connectOrCreate`/`upsert`; um item **sem** `pk` vira um `create` simples.
-- **`nullable`** — só relevante pra `mto`. Quando `true`, enviar `null` no campo resolve pra `disconnect` no update. Pra `oto` com `restriction: "set"`, enviar `null` resolve pra `delete` (um lado `oto` não dá só pra "desconectar", a linha possuída é removida).
+- **`nullable`** — relevante pras relações to-one `oto`/`mto`. Quando `true`, enviar `null` no campo resolve pra `disconnect` no update (`delete` no caso de `oto` com `restriction: "set"` — um lado `oto` não dá só pra "desconectar", a linha possuída é removida). Quando omitido/`false`, enviar `null` numa relação to-one lança um `VSRepoAdapterError` (code `INVALID_DATA`) avisando que a relation não é nullable.
 
 #### Como cada método de escrita resolve relations
 

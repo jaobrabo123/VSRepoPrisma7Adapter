@@ -147,12 +147,12 @@ Cardinality of the relation, from the point of view of the entity that owns the 
 Controls how `save`/`update`/`upsert` handle relation items that already exist (matched by `pk`) and, for to-many relations, items that were **not** included in the payload:
 
 - **`"add"`** — only creates/connects/upserts the items you send. Existing items that aren't in the payload are left untouched.
-- **`"set"`** — same as `"add"`, but also removes what wasn't sent: for `otm` it runs a `deleteMany` on the items missing from the array; for `mtm` it resets the join (`set: []`) before reconnecting; for `oto`/`mto` sending `null` disconnects/deletes the relation (see below).
+- **`"set"`** — same as `"add"`, but also removes what wasn't sent: for `otm` it runs a `deleteMany` on the items missing from the array; for `mtm` it resets the join (`set: []`) before reconnecting; for `oto`/`mto` with `nullable: true`, sending `null` deletes/disconnects the relation (see below).
 
 #### `pk` and `nullable`
 
 - **`pk`** — the field used to identify an existing related record. An item **with** `pk` in the payload becomes a `connectOrCreate`/`upsert`; an item **without** it becomes a plain `create`.
-- **`nullable`** — only relevant for `mto`. When `true`, sending `null` for the field resolves to `disconnect` on update. For `oto` with `restriction: "set"`, sending `null` resolves to `delete` instead (an `oto` side can't just be "disconnected", the owned row is removed).
+- **`nullable`** — relevant for `oto`/`mto` to-one relations. When `true`, sending `null` for the field resolves to `disconnect` on update (`delete` instead for `oto` with `restriction: "set"` — an `oto` side can't just be "disconnected", the owned row is removed). When omitted/`false`, sending `null` for a to-one relation throws a `VSRepoAdapterError` (code `INVALID_DATA`) telling you the relation is not nullable.
 
 #### How each write method resolves relations
 
