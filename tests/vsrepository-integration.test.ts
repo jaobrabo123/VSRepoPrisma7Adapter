@@ -129,6 +129,29 @@ class PostRepository extends VSRepository<Post, number, MyOrmTypes> {
     }
 }
 
+/**
+ * Variante do `UserRepository` com o `address` (oto) configurado com
+ * `nullable: true` — o `UserRepository` acima usa `address` sem `nullable`
+ * (enviar `null` lança `VSRepoAdapterError`), então este cobre o caminho de
+ * `delete` via `null` na to-one.
+ */
+class UserRepositoryWithNullableAddress extends VSRepository<User, number, MyOrmTypes> {
+    constructor() {
+        super({
+            adapter: new VSRepoPrisma7Adapter<User>(prisma, {
+                tableName: "user",
+                pkName: "id",
+                relations: {
+                    address: { mode: "oto", restriction: "set", pk: "id", nullable: true },
+                },
+                logLevel: VSLogLevel.ERROR,
+            }),
+            pkName: "id",
+            logLevel: VSLogLevel.ERROR,
+        });
+    }
+}
+
 describe("VSRepoPrisma7Adapter usado através de uma VSRepository real (integração com Postgres)", () => {
     let userRepository: UserRepository;
     let postRepository: PostRepository;
@@ -306,6 +329,41 @@ describe("VSRepoPrisma7Adapter usado através de uma VSRepository real (integra�
 
             expect(result.tags.map((t: Tag) => t.name).sort()).toEqual(["novidade", "tutorial"]);
             expect(await prisma.tag.count()).toBe(2); // não duplicou a tag existente
+        });
+
+        it("patch enviando o Address como 'null' numa relation oto sem 'nullable' lança 'VSRepoAdapterError' (code INVALID_DATA) e não apaga o Address", async () => {
+            const user = await createUser({ email: "ana@example.com" });
+            await prisma.address.create({
+                data: { street: "Rua A", city: "Recife", country: "BR", userId: user.id },
+            });
+
+            await expect(
+                userRepository.patch(user.id, { address: null }),
+            ).rejects.toThrow(VSRepoAdapterError);
+
+            try {
+                await userRepository.patch(user.id, { address: null });
+                throw new Error("deveria ter lançado VSRepoAdapterError");
+            } catch (err) {
+                expect((err as VSRepoAdapterError).code).toBe(AdapterErrorCode.INVALID_DATA);
+            }
+
+            const stored = await prisma.address.findUnique({ where: { userId: user.id } });
+            expect(stored).not.toBeNull();
+        });
+
+        it("patch com Address 'null' numa relation oto com 'nullable: true' apaga o Address (restriction 'set')", async () => {
+            const nullableAddressRepository = new UserRepositoryWithNullableAddress();
+
+            const user = await createUser({ email: "ana@example.com" });
+            await prisma.address.create({
+                data: { street: "Rua A", city: "Recife", country: "BR", userId: user.id },
+            });
+
+            await nullableAddressRepository.patch(user.id, { address: null });
+
+            const stored = await prisma.address.findUnique({ where: { userId: user.id } });
+            expect(stored).toBeNull();
         });
     });
 
