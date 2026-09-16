@@ -6,6 +6,28 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.1.6] - 2026-09-16
+
+### Added
+- **`PrismaClientModels` type is now exported from the package index** — it is now part of the public API surface with full JSDoc, making it easier to reference the model delegate map type directly from userland
+- **Improved `VSRepoPrisma7AdapterConfig` typings for better auto-complete** — the config type now provides more precise generic constraints, improving IDE auto-complete and type inference when instantiating the adapter
+
+### Changed
+- **Removed `valibot` runtime dependency — constructor validation is now done manually** — `valibot` has been removed from `dependencies`; all constructor config validation (previously delegated to valibot schemas) is now performed through hand-written checks in `validate-adapter-config.validator.ts`. This eliminates an external runtime dependency without any change to the validation behavior or error surface (`VSRepoAdapterError` codes remain the same)
+
+---
+
+## [1.1.6] - 2026-09-16 (Português)
+
+### Adicionado
+- **O tipo `PrismaClientModels` agora é exportado pelo index do pacote** — agora faz parte da API pública com JSDoc completa, facilitando o uso direto do tipo de mapa de delegates do Prisma no código do usuário
+- **Tipagem do `VSRepoPrisma7AdapterConfig` melhorada para facilitar o auto-complete** — o tipo de config agora possui restrições genéricas mais precisas, melhorando o auto-complete da IDE e a inferência de tipos ao instanciar o adapter
+
+### Alterado
+- **Removida a dependência runtime `valibot` — validações do construtor agora são feitas manualmente** — o `valibot` foi removido das `dependencies`; toda a validação da config do construtor (antes delegada aos schemas do valibot) agora é feita por verificações escritas à mão em `validate-adapter-config.validator.ts`. Isso elimina uma dependência externa de runtime sem nenhuma mudança no comportamento de validação ou na superfície de erros (os códigos de `VSRepoAdapterError` permanecem os mesmos)
+
+---
+
 ## [1.1.5] - 2026-09-14
 
 ### Added
