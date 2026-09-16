@@ -1,7 +1,7 @@
 // Testes da validação da config recebida pelo construtor do
 // `VSRepoPrisma7Adapter` (`tableName`, `pkName`, `relations` opcional,
 // `logLevel` opcional). Não precisam de um client Prisma real: a validação
-// (valibot) roda antes de qualquer query ser montada — mesmo espírito do
+// roda antes de qualquer query ser montada — mesmo espírito do
 // `error-handling.test.ts` da v1 de VSRepository, que também usava um
 // "prisma" mínimo/falso para não depender de um banco real.
 

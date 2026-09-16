@@ -52,8 +52,7 @@
     "vsrepo": "^2.1.0"
   },
   "dependencies": {
-    "deepmerge": "^4.3.1",
-    "valibot": "^1.4.2"
+    "deepmerge": "^4.3.1"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
