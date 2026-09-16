@@ -97,7 +97,7 @@ new Prisma7Adapter(prisma, {
 });
 ```
 
-A config é validada com [valibot](https://valibot.dev/) — um `tableName`/`pkName`/`relations`/`logLevel` inválido lança um `VSRepoAdapterError` apontando o campo problemático.
+A config é validada na construção — um `tableName`/`pkName`/`relations`/`logLevel` inválido lança um `VSRepoAdapterError` apontando o campo problemático.
 
 ## Relations
 
