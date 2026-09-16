@@ -46,15 +46,18 @@ import { Prisma7ClientLike } from "./types/prisma7-client-like.type";
  *
  * @publicApi
  */
-export class VSRepoPrisma7Adapter<T> extends VSRepoAdapter<T> {
+export class VSRepoPrisma7Adapter<
+    T,
+    K extends Prisma7ClientLike = Prisma7ClientLike,
+> extends VSRepoAdapter<T> {
     private readonly tableName: string;
     private readonly pkName: string;
     private readonly relations?: AdapterRelations<T>;
     private readonly logger: VSLogger;
 
     constructor(
-        private readonly prisma: Prisma7ClientLike,
-        config: VSRepoPrisma7AdapterConfig<T>,
+        private readonly prisma: K,
+        config: VSRepoPrisma7AdapterConfig<T, K>,
     ) {
         super();
 
