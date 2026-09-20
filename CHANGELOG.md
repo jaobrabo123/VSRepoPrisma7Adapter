@@ -6,6 +6,28 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.2.0] - 2026-09-19
+
+### Added
+- `VSRepoPrisma7Adapter` now implements the new optional `getPkName()` adapter method
+- Now `logSlowThresholdMs` accepts a `number` (ms) **or** a `boolean` — `false` disables slow-operation warnings entirely, `true`/omitted falls back to the default `300`ms
+
+### Changed
+- `vsrepo` peer dependency bumped to `^2.5.0`
+
+---
+
+## [1.2.0] - 2026-09-19 (Português)
+
+### Adicionado
+- `VSRepoPrisma7Adapter` agora implementa o novo método opcional `getPkName()` dos adapters
+- Agora `logSlowThresholdMs` aceita um `number` (ms) **ou** um `boolean` — `false` desativa os warnings de operação lenta por completo, `true`/omitido cai pro default de `300`ms
+
+### Alterado
+- Peer dependency `vsrepo` elevada pra `^2.5.0`
+
+---
+
 ## [1.1.6] - 2026-09-16
 
 ### Added

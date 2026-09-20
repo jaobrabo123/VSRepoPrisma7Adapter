@@ -72,7 +72,6 @@ class UserRepository extends VSRepository<User, string, MyOrmTypes> {
                 },
                 logLevel: VSLogLevel.WARN,
             }),
-            pkName: "id",
         });
     }
 }
@@ -200,8 +199,6 @@ For to-many relations (`otm`/`mtm`), items in the stored record and items in `ob
 
 ## Atomic and aggregation methods
 
-> Requires `vsrepo` **2.1.0+** — these methods were added to the `VSRepoAdapter` contract in that release (see the [VSRepository CHANGELOG](https://github.com/jaobrabo123/VSRepository/blob/main/CHANGELOG.md#210---2026-09-04)).
-
 The adapter implements the 8 abstract methods `VSRepository`'s `increment`/`decrement`/`multiply`/`divide`/`sum`/`average`/`min`/`max` delegate to: `incrementOne`, `decrementOne`, `multiplyOne`, `divideOne`, `sum`, `average`, `min`, `max`.
 
 - `incrementOne`/`decrementOne`/`multiplyOne`/`divideOne` translate directly into Prisma's native single-field atomic write — `data: { [field]: { increment: value } }` (and `decrement`/`multiply`/`divide`) — so the operation is evaluated **server-side** against the row's *current* value (`UPDATE ... SET field = field + value`), not as a fetch-then-save round trip on the client. Prisma's `update()` already returns the row reflecting the state *after* the write, so the adapter never issues a follow-up read.
@@ -298,5 +295,5 @@ The adapter uses `VSLogger` (from `vsrepo`) internally: every method logs a `DEB
 
 ## Requirements
 
-- `vsrepo` ^2.1.0
+- `vsrepo` ^2.5.0
 - `@prisma/client` ^7.10.0

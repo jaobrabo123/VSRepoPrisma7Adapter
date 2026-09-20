@@ -4,6 +4,7 @@
 
 import {
     DynamicMethod,
+    InferMethodType,
     MethodOptions,
     QueryMethod,
     QueryMethodArg,
@@ -36,15 +37,15 @@ class UserRepository extends VSRepository<User, number, MyOrmTypes> {
                     },
                 },
                 logLevel: VSLogLevel.DEBUG,
+                logSlowThresholdMs: false,
             }),
-            pkName: "id",
             logSlowThresholdMs: 200,
             logLevel: VSLogLevel.DEBUG,
         });
     }
 
     @DynamicMethod()
-    declare findOneByEmail: (email: string, options?: UserMethodOptions) => Promise<User | null>;
+    declare findOneByEmail: InferMethodType<[email: string], User | null, MyOrmTypes>;
 
     @DynamicMethod()
     declare findByEmailEndsWithOrderByEmail: (email: string) => Promise<User[]>;
@@ -76,7 +77,6 @@ export class AddressRepository extends VSRepository<Address, number, MyOrmTypes>
                     },
                 },
             }),
-            pkName: "id",
         });
     }
 }
@@ -107,7 +107,9 @@ async function example() {
     const namelessUsers = await userRepository.findNameless({});
     console.log(namelessUsers);
 
-    const joao = await userRepository.findOneByEmail("joao@vsmail.com");
+    const joao = await userRepository.findOneByEmail("joao@vsmail.com", {
+        relations: { posts: true },
+    });
     console.log(joao);
 
     if (joao) {

@@ -1,6 +1,6 @@
 {
   "name": "@vsrepo/prisma7-adapter",
-  "version": "1.1.6",
+  "version": "1.2.0",
   "description": "VSRepository adapter implementation backed by Prisma 7, translating every VSRepository operation into Prisma Client calls.",
   "homepage": "https://github.com/jaobrabo123/VSRepoPrisma7Adapter#readme",
   "repository": {
@@ -45,11 +45,19 @@
     "vsrepository",
     "adapter"
   ],
-  "author": "João Pedro Azevedo Freire Mecenas",
+  "author": {
+    "email": "joaodev.azevedo@outlook.com",
+    "url": "https://github.com/jaobrabo123",
+    "name": "João Pedro Azevedo Freire Mecenas"
+  },
+  "bugs": {
+    "email": "joaodev.azevedo@outlook.com",
+    "url": "https://github.com/jaobrabo123/VSRepoDrizzleAdapter/issues"
+  },
   "license": "MIT",
   "peerDependencies": {
     "@prisma/client": "^7.10.0",
-    "vsrepo": "^2.1.0"
+    "vsrepo": "^2.5.0"
   },
   "dependencies": {
     "deepmerge": "^4.3.1"

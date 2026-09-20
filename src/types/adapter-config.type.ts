@@ -26,7 +26,8 @@ export interface VSRepoPrisma7AdapterConfig<
     /** Minimum log level for the adapter's internal `VSLogger`. @default VSLogLevel.WARN */
     logLevel?: VSLogLevel;
     /**
-     * Duration (in ms) above which a finished operation is logged, flagging potentially slow queries. Defaults to 300ms.
+     * Duration (in ms) above which a finished operation is logged as `WARN`, flagging a potentially slow query, instead of the usual
+     * `DEBUG` line. Pass `false` to disable slow-operation warnings entirely (every operation is then only ever logged at `DEBUG`); `true` (or omitting the field) uses the default of 300ms.
      */
-    logSlowThresholdMs?: number;
+    logSlowThresholdMs?: number | boolean;
 }

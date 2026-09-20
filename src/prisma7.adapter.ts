@@ -839,4 +839,13 @@ export class VSRepoPrisma7Adapter<
     ): Promise<number | null> {
         return this.aggregate("max", field, where, options);
     }
+
+    /**
+     * Returns the model's primary key
+     *
+     * @publicApi
+     */
+    override getPkName(): string {
+        return this.pkName;
+    }
 }

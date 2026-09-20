@@ -90,10 +90,12 @@ export function validateAdapterConfig<T>(config: unknown): VSRepoPrisma7AdapterC
         fail("logLevel", `must be a valid VSLogLevel value (${[...VALID_LOG_LEVELS].join(", ")})`);
     }
 
-    if (c.logSlowThresholdMs !== undefined) {
-        if (typeof c.logSlowThresholdMs !== "number" || c.logSlowThresholdMs <= 0) {
-            fail("logSlowThresholdMs", "must be a number greater than 0");
-        }
+    if (
+        c.logSlowThresholdMs !== undefined &&
+        typeof c.logSlowThresholdMs !== "boolean" &&
+        (typeof c.logSlowThresholdMs !== "number" || c.logSlowThresholdMs <= 0)
+    ) {
+        fail("logSlowThresholdMs", "must be a number greater than 0, or a boolean");
     }
 
     return config as VSRepoPrisma7AdapterConfig<T>;
