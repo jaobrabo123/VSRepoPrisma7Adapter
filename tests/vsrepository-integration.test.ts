@@ -67,7 +67,6 @@ class UserRepository extends VSRepository<User, number, MyOrmTypes> {
                 },
                 logLevel: VSLogLevel.ERROR,
             }),
-            pkName: "id",
             logLevel: VSLogLevel.ERROR,
         });
     }
@@ -123,7 +122,6 @@ class PostRepository extends VSRepository<Post, number, MyOrmTypes> {
                 },
                 logLevel: VSLogLevel.ERROR,
             }),
-            pkName: "id",
             logLevel: VSLogLevel.ERROR,
         });
     }
@@ -146,7 +144,6 @@ class UserRepositoryWithNullableAddress extends VSRepository<User, number, MyOrm
                 },
                 logLevel: VSLogLevel.ERROR,
             }),
-            pkName: "id",
             logLevel: VSLogLevel.ERROR,
         });
     }
@@ -337,9 +334,9 @@ describe("VSRepoPrisma7Adapter usado atravÃ©s de uma VSRepository real (integraÃ
                 data: { street: "Rua A", city: "Recife", country: "BR", userId: user.id },
             });
 
-            await expect(
-                userRepository.patch(user.id, { address: null }),
-            ).rejects.toThrow(VSRepoAdapterError);
+            await expect(userRepository.patch(user.id, { address: null })).rejects.toThrow(
+                VSRepoAdapterError,
+            );
 
             try {
                 await userRepository.patch(user.id, { address: null });
