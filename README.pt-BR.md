@@ -199,8 +199,6 @@ Pra relations to-many (`otm`/`mtm`), os itens do registro salvo e os itens de `o
 
 ## Métodos atômicos e de agregação
 
-> Requer `vsrepo` **2.1.0+** — esses métodos foram adicionados ao contrato do `VSRepoAdapter` nessa versão (veja o [CHANGELOG do VSRepository](https://github.com/jaobrabo123/VSRepository/blob/main/CHANGELOG.md#210---2026-09-04-português)).
-
 O adapter implementa os 8 métodos abstratos pros quais `increment`/`decrement`/`multiply`/`divide`/`sum`/`average`/`min`/`max` do `VSRepository` delegam: `incrementOne`, `decrementOne`, `multiplyOne`, `divideOne`, `sum`, `average`, `min`, `max`.
 
 - `incrementOne`/`decrementOne`/`multiplyOne`/`divideOne` traduzem direto pra escrita atômica nativa de campo único do Prisma — `data: { [field]: { increment: value } }` (e `decrement`/`multiply`/`divide`) — então a operação é avaliada **server-side** contra o valor *atual* do registro (`UPDATE ... SET field = field + value`), e não como um fetch-then-save no cliente. O `update()` do Prisma já retorna a linha refletindo o estado *após* a escrita, então o adapter nunca precisa fazer uma leitura extra.
@@ -297,5 +295,5 @@ O adapter usa o `VSLogger` (de `vsrepo`) internamente: todo método loga uma lin
 
 ## Requisitos
 
-- `vsrepo` ^2.1.0
+- `vsrepo` ^2.5.0
 - `@prisma/client` ^7.10.0
