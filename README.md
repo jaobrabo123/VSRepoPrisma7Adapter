@@ -72,7 +72,6 @@ class UserRepository extends VSRepository<User, string, MyOrmTypes> {
                 },
                 logLevel: VSLogLevel.WARN,
             }),
-            pkName: "id",
         });
     }
 }
