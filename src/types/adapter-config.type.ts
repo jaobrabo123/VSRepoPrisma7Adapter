@@ -2,6 +2,7 @@ import type { VSLogLevel } from "vsrepo";
 import { AdapterRelations } from "./adapter-relations.type";
 import { Prisma7ClientLike } from "./prisma7-client-like.type";
 import { PrismaClientModels } from "./prisma-client-models.type";
+import { PrismaProvider } from "./prisma-provider.type";
 
 /**
  * Configuration accepted by `VSRepoPrisma7Adapter`'s constructor, as the
@@ -23,6 +24,14 @@ export interface VSRepoPrisma7AdapterConfig<
      * Optional: without it, relation fields are passed through to Prisma as-is (raw).
      */
     relations?: AdapterRelations<T>;
+    /**
+     * The Prisma schema provider, used to resolve the raw-query placeholder
+     * syntax (`getPlaceholder()`). When omitted, the adapter detects it from
+     * the generated Prisma Client (`_engineConfig.activeProvider`, falling
+     * back to the driver adapter's `provider`). Provide it manually to
+     * override detection.
+     */
+    provider?: PrismaProvider;
     /** Minimum log level for the adapter's internal `VSLogger`. @default VSLogLevel.WARN */
     logLevel?: VSLogLevel;
     /**

@@ -6,3 +6,4 @@ export type { Prisma7ClientLike } from "./types/prisma7-client-like.type";
 export type { AdapterRelations } from "./types/adapter-relations.type";
 export type { VSRepoPrisma7AdapterConfig } from "./types/adapter-config.type";
 export type { PrismaClientModels } from "./types/prisma-client-models.type";
+export type { PrismaProvider } from "./types/prisma-provider.type";

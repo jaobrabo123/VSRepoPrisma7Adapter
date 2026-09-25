@@ -1,5 +1,6 @@
 import { AdapterErrorCode, VSLogLevel, VSRepoAdapterError } from "vsrepo";
 import { VSRepoPrisma7AdapterConfig } from "../types/adapter-config.type";
+import { PRISMA_PROVIDERS, PrismaProvidersSet } from "../resolvers/resolve-provider.resolver";
 
 const VALID_MODES = ["otm", "mtm", "mto", "oto"] as const;
 const VALID_RESTRICTIONS = ["set", "add"] as const;
@@ -88,6 +89,13 @@ export function validateAdapterConfig<T>(config: unknown): VSRepoPrisma7AdapterC
 
     if (c.logLevel !== undefined && !VALID_LOG_LEVELS.has(c.logLevel as number)) {
         fail("logLevel", `must be a valid VSLogLevel value (${[...VALID_LOG_LEVELS].join(", ")})`);
+    }
+
+    if (c.provider !== undefined && !PrismaProvidersSet.has(c.provider as string)) {
+        fail(
+            "provider",
+            `must be one of: ${PRISMA_PROVIDERS.join(", ")} (or omitted so it's detected from the Prisma client)`,
+        );
     }
 
     if (
