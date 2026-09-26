@@ -295,5 +295,5 @@ The adapter uses `VSLogger` (from `vsrepo`) internally: every method logs a `DEB
 
 ## Requirements
 
-- `vsrepo` ^2.5.0
+- `vsrepo` ^2.7.0
 - `@prisma/client` ^7.10.0

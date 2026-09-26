@@ -33,8 +33,13 @@ export type FakeDelegate = ReturnType<typeof createFakeDelegate>;
  * `$transaction` por padrão só executa o callback passando o próprio client
  * falso como `tx` (não simula rollback/commit de verdade) — suficiente para
  * verificar que o adapter participa/inicia transações corretamente.
+ *
+ * `activeProvider` (default `"postgresql"`) simula o `_engineConfig.activeProvider`
+ * que o Prisma gera a partir do `datasource` do schema, permitindo testar a
+ * detecção de provider/placeholder do adapter. Passe `null` para criar um client
+ * sem `_engineConfig` (simulando um client cujo provider não é detectável).
  */
-export function createFakePrisma() {
+export function createFakePrisma(activeProvider: string | null = "postgresql") {
     const user = createFakeDelegate();
     const address = createFakeDelegate();
     const post = createFakeDelegate();
@@ -51,6 +56,10 @@ export function createFakePrisma() {
         $on: jest.fn(),
         $transaction: jest.fn(async (fn: (tx: any) => Promise<any>) => fn(client)),
     };
+
+    if (activeProvider !== null) {
+        client._engineConfig = { activeProvider };
+    }
 
     return { client, user, address, post, tag };
 }

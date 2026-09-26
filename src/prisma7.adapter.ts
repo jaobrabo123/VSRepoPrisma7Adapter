@@ -20,10 +20,12 @@ import { parsePrismaOrderBy } from "./parsers/order-by.parser";
 import { parsePrismaWriteData } from "./parsers/data.parser";
 import { mergeEntities } from "./resolvers/merge-entities.resolver";
 import { mapPrismaError } from "./resolvers/map-prisma-error.resolver";
+import { resolveProvider } from "./resolvers/resolve-provider.resolver";
 import { validateAdapterConfig } from "./validators/validate-adapter-config.validator";
 import { validatePrismaClient } from "./validators/validate-prisma-client.validator";
 import { AdapterRelations } from "./types/adapter-relations.type";
 import { VSRepoPrisma7AdapterConfig } from "./types/adapter-config.type";
+import { PrismaProvider } from "./types/prisma-provider.type";
 import { PrismaArgLike } from "./types/prisma-arg-like.type";
 import { PrismaRepositoryLike } from "./types/prisma-repository-like.type";
 import { PlainObject } from "./types/plain-object.type";
@@ -54,6 +56,7 @@ export class VSRepoPrisma7Adapter<
     private readonly pkName: string;
     private readonly relations?: AdapterRelations<T>;
     private readonly logger: VSLogger;
+    private readonly provider: PrismaProvider | undefined;
 
     constructor(
         private readonly prisma: K,
@@ -68,6 +71,7 @@ export class VSRepoPrisma7Adapter<
         this.tableName = validated.tableName;
         this.pkName = validated.pkName as string;
         this.relations = validated.relations;
+        this.provider = resolveProvider(prisma, validated.provider);
         this.logger = new VSLogger(
             validated.logLevel ?? VSLogLevel.WARN,
             this.constructor.name + "Logger",
@@ -77,7 +81,7 @@ export class VSRepoPrisma7Adapter<
         this.logger.logInfo(
             `${this.constructor.name} initialized for table '${this.tableName}' (pkName: '${this.pkName}'${
                 this.relations ? `, relations: [${Object.keys(this.relations).join(", ")}]` : ""
-            })`,
+            }, provider: ${this.provider ? `'${this.provider}'` : "<not detected>"})`,
         );
     }
 
@@ -847,5 +851,32 @@ export class VSRepoPrisma7Adapter<
      */
     override getPkName(): string {
         return this.pkName;
+    }
+
+    /**
+     * Returns the placeholder corresponding to the index, based on the database dialect.
+     *
+     * @publicApi
+     */
+    override getPlaceholder(index: number): string {
+        switch (this.provider) {
+            case "postgresql":
+            case "cockroachdb":
+                return `$${index + 1}`;
+            case "mysql":
+            case "sqlite":
+                return "?";
+            case "sqlserver":
+                return `@P${index + 1}`;
+            default:
+                throw new VSRepoAdapterError(
+                    "Cannot resolve the raw-query placeholder syntax: the Prisma provider couldn't be detected from the client, " +
+                        "and no 'provider' was set in the adapter config. Set 'provider' in the VSRepoPrisma7Adapter config (one of: " +
+                        "postgresql, cockroachdb, mysql, sqlite, sqlserver) to enable raw-query placeholder compilation " +
+                        "(e.g. VSSql fragments and 'vsPlaceholders').",
+                    AdapterErrorCode.NOT_SUPPORTED,
+                    null,
+                );
+        }
     }
 }
