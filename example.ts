@@ -36,11 +36,11 @@ class UserRepository extends VSRepository<User, number, MyOrmTypes> {
                         restriction: "set",
                     },
                 },
-                logLevel: VSLogLevel.DEBUG,
-                logSlowThresholdMs: false,
+                logLevel: VSLogLevel.INFO,
+                // provider: "postgresql",
             }),
             logSlowThresholdMs: 200,
-            logLevel: VSLogLevel.DEBUG,
+            logLevel: VSLogLevel.INFO,
         });
     }
 

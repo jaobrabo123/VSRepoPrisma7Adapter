@@ -6,6 +6,30 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.3.0] - 2026-09-26
+
+### Added
+- **Provider detection** — detection order: the new `provider` constructor option (overrides) → the generated client's `_engineConfig.activeProvider` → the driver adapter's `provider`. Never throws, even when nothing can be detected
+- **`getPlaceholder(index)`** — implements the new optional `VSRepoAdapter.getPlaceholder?` method released with `vsrepo` 2.7.0: returns the raw-query placeholder syntax for the `index`-th (0-based) bound parameter (`$${index + 1}` for `postgresql`/`cockroachdb`, `?` for `mysql`/`sqlite`, `@P${index + 1}` for `sqlserver`). This is what enables `VSSql` fragments and `vsPlaceholders` in `VSRepository`. When the provider can't be resolved, it throws a `VSRepoAdapterError` (code `NOT_SUPPORTED`) only when actually called — never at construction
+
+### Changed
+- New optional `provider` field in the constructor config, validated at construction time against the provider picklist
+- `vsrepo` peer dependency bumped to `^2.7.0`
+
+---
+
+## [1.3.0] - 2026-09-26 (Português)
+
+### Adicionado
+- **Detecção de provider** — ordem de detecção: a nova opção `provider` do construtor (sobrescreve) → o `_engineConfig.activeProvider` do client gerado → o `provider` do driver adapter. Nunca lança, mesmo quando nada é detectável
+- **`getPlaceholder(index)`** — implementa o novo método opcional `VSRepoAdapter.getPlaceholder?` lançado junto com a `vsrepo` 2.7.0: retorna a sintaxe de placeholder de query raw pro N-ésimo (base 0) parâmetro ligado (`$${index + 1}` pra `postgresql`/`cockroachdb`, `?` pra `mysql`/`sqlite`, `@P${index + 1}` pra `sqlserver`). É o que habilita os fragmentos `VSSql` e o `vsPlaceholders` no `VSRepository`. Quando o provider não é resolvível, lança um `VSRepoAdapterError` (code `NOT_SUPPORTED`) somente quando é de fato chamado — nunca na construção
+
+### Alterado
+- Nova opção opcional `provider` na config do construtor, validada na construção contra o picklist de providers
+- Peer dependency `vsrepo` elevada pra `^2.7.0`
+
+---
+
 ## [1.2.0] - 2026-09-19
 
 ### Added
