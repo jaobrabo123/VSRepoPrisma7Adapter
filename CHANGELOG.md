@@ -6,6 +6,26 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.3.1] - 2026-09-29
+
+### Fixed
+- **`saveMany` no longer runs the individual `save` calls in parallel inside the transaction** — previously, all records were dispatched at once with `Promise.all(objs.map(...))` against the same transaction client, but a Prisma/pg transaction client cannot execute concurrent queries: it emitted `DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.` and would break outright on `pg@9`. Records are now saved sequentially (`await` inside a `for` loop), still inside the same transaction, reusing an active `options.db` transaction client when one is given
+
+### Changed
+- `vsrepo` peer dependency bumped to `^2.7.2`
+
+---
+
+## [1.3.1] - 2026-09-29 (Português)
+
+### Corrigido
+- **`saveMany` não executa mais os `save` individuais em paralelo dentro da transação** — anteriormente, todos os registros eram disparados de uma vez com `Promise.all(objs.map(...))` contra o mesmo transaction client, mas um transaction client do Prisma/pg não pode executar queries concorrentes: ele emitia `DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.` e passaria a quebrar de vez no `pg@9`. Agora os registros são salvos sequencialmente (`await` dentro de um `for`), ainda dentro da mesma transação, reaproveitando um transaction client já ativo em `options.db` quando fornecido
+
+### Alterado
+- Peer dependency `vsrepo` elevada pra `^2.7.2`
+
+---
+
 ## [1.3.0] - 2026-09-26
 
 ### Added

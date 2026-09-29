@@ -372,9 +372,14 @@ export class VSRepoPrisma7Adapter<
                 `Saving ${objs.length} record(s) individually inside a transaction`,
             );
 
-            return await this.runTransactional(options?.db, tx =>
-                Promise.all(objs.map(obj => this.save(obj, { ...options, db: tx }))),
-            );
+            return await this.runTransactional(options?.db, async tx => {
+                const saved: T[] = [];
+                for (let i = 0; i < objs.length; i++) {
+                    const obj = objs[i]!;
+                    saved.push(await this.save(obj, { ...options, db: tx }));
+                }
+                return saved;
+            });
         } catch (error) {
             throw mapPrismaError(error, "saveMany");
         } finally {
@@ -696,11 +701,11 @@ export class VSRepoPrisma7Adapter<
      * VSRepository had (see `mergeEntities`). It's on the caller to decide
      * what to do with the result (e.g. call `save` next).
      */
-    public async merge<K>(
+    public async merge<K extends DeepPartial<T>>(
         where: VSRepoWhere<T>,
-        obj: DeepPartial<T>,
+        obj: K,
         options?: AdapterMethodOptions<T>,
-    ): Promise<K & T> {
+    ): Promise<(K & T) | null> {
         const start = this.logger.startPerformLog("run merge");
 
         try {
@@ -708,7 +713,7 @@ export class VSRepoPrisma7Adapter<
             this.logger.logDebug("Resolved Prisma arg for 'merge'", arg);
 
             const result = await this.getPrismaRepository(options?.db).findFirst(arg);
-            if (!result) return null as unknown as K & T;
+            if (!result) return null;
 
             return mergeEntities(result, obj as PlainObject, this.relations) as K & T;
         } catch (error) {
