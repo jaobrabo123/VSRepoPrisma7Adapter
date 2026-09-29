@@ -295,5 +295,5 @@ O adapter usa o `VSLogger` (de `vsrepo`) internamente: todo método loga uma lin
 
 ## Requisitos
 
-- `vsrepo` ^2.7.0
+- `vsrepo` ^2.7.2
 - `@prisma/client` ^7.10.0
