@@ -6,6 +6,22 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.3.2] - 2026-09-30
+
+### Fixed
+-  **`mode: "insensitive"` is now always applied when `ignoreCase` is `true`** – prior to this fix, `mode: "insensitive"` was only applied to fields within a specific list; it did not cover the `in` and `notIn` fields, nor others that also support case-insensitivity
+- **`is` and `isNot` can now be applied together** – prior to this fix, *parseObjectRelationFilter* applied only one or the other, potentially silently ignoring user filters
+
+---
+
+## [1.3.2] - 2026-09-30 (Português)
+
+### Corrigido
+- **`mode: "insensitive"` agora é sempre aplicado quando `ignoreCase` for `true`** - antes desse fix o `mode: "insensitive"` só era aplicado em campos dentro de uma lista específica, porém não cobria os campos `in` e `notIn`, e outros que também podem aceitar o insensitive
+- **`is` e `isNot` agora podem ser aplicados juntos** - antes desse fix o *parseObjectRelationFilter* só aplicava um ou outro, podendo silenciosamente ignorar filtros do usuário
+
+---
+
 ## [1.3.1] - 2026-09-29
 
 ### Fixed
