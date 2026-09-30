@@ -23,7 +23,7 @@ function parseOrderByField(order: PlainObject): PlainObject {
         if (value === undefined) continue;
 
         result[key] = isSortDirection(value)
-            ? (value.toLowerCase() as "asc" | "desc")
+            ? value.toLowerCase()
             : isPlainObject(value)
               ? parseOrderByField(value)
               : value;
@@ -36,10 +36,10 @@ function parseOrderByField(order: PlainObject): PlainObject {
  * Use o segundo generic para tipar o retorno com o `OrderByInput`
  * do Prisma correspondente ao modelo.
  */
-export function parsePrismaOrderBy<T, O = any>(
-    order: Ordering<T> | undefined | null,
-): O | undefined {
-    if (order === undefined || order === null) return undefined;
+export function parsePrismaOrderBy<T>(
+    order: Ordering<T> | undefined,
+): PlainObject | PlainObject[] | undefined {
+    if (!order) return;
 
-    return (Array.isArray(order) ? order.map(o => parseOrderByField(o)) : parseOrderByField(order)) as O;
+    return Array.isArray(order) ? order.map(o => parseOrderByField(o)) : parseOrderByField(order);
 }
