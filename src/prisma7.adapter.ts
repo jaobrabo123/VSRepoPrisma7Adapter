@@ -236,7 +236,7 @@ export class VSRepoPrisma7Adapter<
 
         try {
             const arg = {
-                where: parsePrismaWhere<T>(where),
+                where: parsePrismaWhere<T>(where) as any,
                 [aggKey]: { [field]: true },
             };
             this.logger.logDebug(`Resolved Prisma arg for '${operation}'`, arg);

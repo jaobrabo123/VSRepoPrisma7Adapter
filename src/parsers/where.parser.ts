@@ -44,11 +44,7 @@ const FIELD_OPERATOR_KEYS = new Set([
     "ignoreCase",
 ]);
 
-/** Chaves de operadores de string que aceitam `mode: 'insensitive'` no Prisma */
-const CASE_SENSITIVE_STRING_KEYS = ["equals", "contains", "startsWith", "endsWith"];
-
 const LOGICAL_KEYS = new Set(["AND", "OR", "NOT"]);
-
 
 /** Verifica se um objeto "parece" um VSRepoFieldOperators (e não um filtro de relação/nested where) */
 function isFieldOperatorObject(value: PlainObject): boolean {
@@ -99,10 +95,8 @@ function parseFieldOperators(value: PlainObject): PlainObject {
     }
 
     if (ignoreCase) {
-        const hasCaseSensitiveKey = CASE_SENSITIVE_STRING_KEYS.some(k => k in result);
-        if (hasCaseSensitiveKey) {
-            result.mode = "insensitive";
-        }
+        // * Simplismente aplica o "insensitive" se o ignoreCase for true, se for em um campo inválido o proprio Prisma lança erro
+        result.mode = "insensitive";
     }
 
     return result;
@@ -127,13 +121,16 @@ function parseArrayRelationFilter(value: PlainObject): PlainObject {
 
 /** Converte { _with, _without } em { is, isNot } (VSRepoWherePlain — sem AND/OR/NOT) */
 function parseObjectRelationFilter(value: PlainObject): PlainObject {
+    const result: PlainObject = {};
+
     if (value._with !== undefined) {
-        return { is: parsePlainWhere(value._with) };
+        result.is = parsePlainWhere(value._with);
     }
     if (value._without !== undefined) {
-        return { isNot: parsePlainWhere(value._without) };
+        result.isNot = parsePlainWhere(value._without);
     }
-    return {};
+
+    return result;
 }
 
 /** Decide como interpretar o valor de um campo do where */
@@ -207,13 +204,11 @@ function parseWhere(where: PlainObject | undefined | null): PlainObject | undefi
 }
 
 /**
- * API pública. Use o segundo generic para tipar o retorno com o `WhereInput`
+ * Use o segundo generic para tipar o retorno com o `WhereInput`
  * do Prisma correspondente ao modelo, ex:
  *
  *   parseVSRepoWhere<User, Prisma.UserWhereInput>(where)
  */
-export function parsePrismaWhere<T, W = any>(
-    where: VSRepoWhere<T> | undefined | null,
-): W | undefined {
-    return parseWhere(where) as W | undefined;
+export function parsePrismaWhere<T>(where: VSRepoWhere<T> | undefined): PlainObject | undefined {
+    return parseWhere(where);
 }
