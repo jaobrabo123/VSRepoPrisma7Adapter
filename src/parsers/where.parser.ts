@@ -121,13 +121,16 @@ function parseArrayRelationFilter(value: PlainObject): PlainObject {
 
 /** Converte { _with, _without } em { is, isNot } (VSRepoWherePlain — sem AND/OR/NOT) */
 function parseObjectRelationFilter(value: PlainObject): PlainObject {
+    const result: PlainObject = {};
+
     if (value._with !== undefined) {
-        return { is: parsePlainWhere(value._with) };
+        result.is = parsePlainWhere(value._with);
     }
     if (value._without !== undefined) {
-        return { isNot: parsePlainWhere(value._without) };
+        result.isNot = parsePlainWhere(value._without);
     }
-    return {};
+
+    return result;
 }
 
 /** Decide como interpretar o valor de um campo do where */
